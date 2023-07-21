@@ -11,14 +11,9 @@
 #define BLOCK_ID_MASK 0x00000FFF
 #define BLOCK_ID_OFFSET 0
 
-#define BLOCK_LIGHT_MASK 0x0000F000
+#define BLOCK_LIGHT_MASK 0xFFFFF000
 #define BLOCK_LIGHT_OFFSET 12
 
-#define BLOCK_LIGHT_COLOR_MASK 0x0FFF0000
-#define BLOCK_LIGHT_COLOR_OFFSET 16
-
-#define BLOCK_SUNLIGHT_MASK 0xF0000000
-#define BLOCK_SUNLIGHT_OFFSET 27
 
 #include "./util.h"
 #include <GL/glew.h>
@@ -28,6 +23,7 @@ typedef struct Chunk {
 
 	// position in chunks
 	Vec3i pos;
+	Vec3i pos_in_blocks;
 
 	// [27;31] - Sunlight intensity
 	// [24;27] - Blue light color channel
@@ -59,8 +55,8 @@ void chunk_update(Chunk *chunk);
 
 void chunk_render(Chunk *chunk);
 
-#define CHUNK_IN_BOUNDS(pos) (pos.x >= 0 && pos.x < CHUNK_SIZE	\
-							  pos.y >= 0 && pos.y < CHUNK_SIZE	\
+#define CHUNK_IN_BOUNDS(pos) (pos.x >= 0 && pos.x < CHUNK_SIZE &&	\
+							  pos.y >= 0 && pos.y < CHUNK_SIZE &&	\
 							  pos.z >= 0 && pos.z < CHUNK_SIZE)
 
 #define CHUNK_POS_2_INDEX(pos) (pos.x + pos.y*CHUNK_SIZE + pos.z*CHUNK_SIZE*CHUNK_SIZE)

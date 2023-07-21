@@ -11,6 +11,6 @@ typedef struct Player {
 
 void player_init(Player *player);
 
-void player_update(Player *player);
+void player_update(Player *player, f32 dt);
 
 #endif

@@ -15,6 +15,8 @@ typedef struct State {
 	Shader shaders[SHADER_COUNT];
 	GLuint model_uniform, view_uniform, projection_uniform;
 	Atlas block_atlas;
+
+	const u8 *keyboard;
 } State;
 
 extern State state;

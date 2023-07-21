@@ -5,15 +5,13 @@
 #include "include/state.h"
 #include "include/block.h"
 
+#define UPDATES_PER_SECOND 30
 
 State state;
 
-GLuint VAO;
-GLuint VBO;
-
 void init()
 {
-	world_create(&state.world, 1);
+	world_create(&state.world, 20);
 
 	shader_create(&state.shaders[SHADER_CHUNK], "./res/shaders/chunk.vert", "./res/shaders/chunk.frag");
 
@@ -25,10 +23,9 @@ void init()
 
 	block_init();
 
-	state.world.chunks[0].data[0] = 1;
-	state.world.chunks[0].data[CHUNK_POS_2_INDEX(((Vec3i){{0, 0, 1}}))] = 1;
-	state.world.player.camera.transform.position = (Vec3) {{0.0f, 4.0f, -2.0f}};
+	state.world.player.camera.transform.position = (Vec3) {{10.0f, 21.0f, 10.0f}};
 
+	state.keyboard = SDL_GetKeyboardState(NULL);
 }
 
 int main()
@@ -68,13 +65,23 @@ int main()
 
 	glEnable(GL_DEPTH_TEST);
 	glViewport(0, 0, 1280, 720);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.5f, 0.8f, 0.98f, 1.0f);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 	init();
 
+	u32 last_time = SDL_GetTicks();
+	u32 time_to_process = 0;
+	const u32 ms_per_update = 1000 / UPDATES_PER_SECOND;
+
+	bool is_updated= false;
 	bool quit = false;
 	while(!quit){
+		u32 curr_time = SDL_GetTicks();
+		u32 delta_time = curr_time - last_time;
+		last_time = curr_time;
+		time_to_process += delta_time;
+
 		SDL_Event event;
 		while(SDL_PollEvent(&event)){
 			switch(event.type){
@@ -98,11 +105,21 @@ int main()
 			}
 		}
 
-		world_update(&state.world);
+		while(time_to_process >= ms_per_update){
+			world_update(&state.world, 1.0f/ UPDATES_PER_SECOND);
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		world_render(&state.world);
-		SDL_GL_SwapWindow(window);
+			is_updated = true;
+			time_to_process -= ms_per_update;
+		}
+
+		if(is_updated){
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			world_render(&state.world);
+			SDL_GL_SwapWindow(window);
+
+			is_updated = false;
+		}
+
 	}
 
 	SDL_GL_DeleteContext(context);

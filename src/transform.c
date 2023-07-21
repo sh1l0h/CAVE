@@ -16,6 +16,7 @@ void transform_update(Transform *transform)
 	f32 s_y = sinf(transform->rotation.y);
 
 	transform->forward = (Vec3) {{c_x*s_y, -s_x, c_x*c_y}};
+	zinc_vec3_normalize(&transform->forward);
 	zinc_vec3_cross(&(Vec3){{0.0f, 1.0f, 0.0f}}, &transform->forward, &transform->right);
 	zinc_vec3_normalize(&transform->right);
 	zinc_vec3_cross(&transform->forward, &transform->right, &transform->up);

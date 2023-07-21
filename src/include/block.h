@@ -14,7 +14,9 @@ enum BlockID {
 
 typedef struct Block {
     i32 id;
-    
+
+	bool is_transparent;
+	
     void (*get_sprite_position)(Vec2i *vec, i32 direction);
 } Block;
 
