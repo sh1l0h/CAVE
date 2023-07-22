@@ -10,6 +10,8 @@ void player_init(Player *player)
 
 void player_update(Player *player, f32 dt)
 {
+	player->chunk_pos = (Vec3i)POS_2_CHUNK((player->camera.transform.position));
+
 	f32 speed = 10.0f * dt;
 	Vec3 vel = ZINC_VEC3_ZERO;
 	Vec3 forward;
@@ -50,15 +52,6 @@ void player_update(Player *player, f32 dt)
 	if(state.keyboard[SDL_SCANCODE_A]){
 		zinc_vec3_scale(&right, -speed, &tmp);
 		zinc_vec3_add(&vel, &tmp, &vel);
-	}
-
-	Chunk *selected_block_chunk;
-	Vec3i selected_block;
-	world_cast_ray(&state.world, &player->camera.transform.position, &player->camera.transform.forward, 5.0f, &selected_block_chunk, &selected_block);
-
-	if(selected_block_chunk && state.keyboard[SDL_SCANCODE_E]){
-		selected_block_chunk->is_dirty = true;
-		selected_block_chunk->data[CHUNK_POS_2_INDEX(selected_block)] = BLOCK_AIR;
 	}
 
 	zinc_vec3_add(&vel, &player->camera.transform.position, &player->camera.transform.position);

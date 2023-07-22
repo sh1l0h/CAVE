@@ -24,6 +24,7 @@ add_executable(${PROJECT_NAME}
     src/player.c
     src/transform.c
     src/mesh_buffer.c
+    src/noise.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

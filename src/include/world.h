@@ -5,39 +5,36 @@
 #include "./chunk.h"
 #include "./player.h"
 
-#define WORLD_POS_2_INDEX(world, pos) (pos.x + pos.y*world->chunks_size + pos.z*world->chunks_size*world->chunks_size)
-
-#define WORLD_IN_BOUNDS(world, pos) (pos.x >= world->chunks_border_min_in_blocks.x && pos.x < world->chunks_border_max_in_blocks.x && \
-									 pos.y >= world->chunks_border_min_in_blocks.y && pos.y < world->chunks_border_max_in_blocks.y && \
-									 pos.z >= world->chunks_border_min_in_blocks.z && pos.z < world->chunks_border_max_in_blocks.z)
-
-#define WORLD_VOLUME(world) (world->chunks_size * world->chunks_size * world->chunks_size)
-
-#define WORLD_FPOS_2_IPOS(pos) {{pos.x < 0.0f ? (i32)pos.x - 1 : (i32)pos.x, pos.y < 0.0f ? (i32)pos.y - 1 : (i32)pos.y, pos.z < 0.0f ? (i32)pos.z - 1 : (i32)pos.z}}	
+#define WORLD_VOLUME(world) (world->chunks_size.x * world->chunks_size.y * world->chunks_size.z)
 
 typedef struct World {
 	Player player;
 
-	Vec3i chunks_border_min;
-	Vec3i chunks_border_min_in_blocks;
+	// near-bottom-left coordinate of active chunks
+	Vec3i origin;
 
-	Vec3i chunks_border_max;
-	Vec3i chunks_border_max_in_blocks;
-
+	// 3D array of active chunks
 	Chunk *chunks;
-	u32 chunks_size;
+	
+	Vec3i chunks_size;
 } World;
 
-void world_create(World *world, u32 chunks_size);
+void world_create(World *world, i32 size_x, i32 size_y, i32 size_z);
 
 void world_update(World *world, f32 dt);
 
 void world_render(World *world);
 
-void world_get_chunk(World *world, const Vec3i *vec, Chunk **chunk, Vec3i *chunk_vec);
+Chunk *world_get_chunk(World *world, const Vec3i *chunk_pos);
 
-bool world_in_bounds(World *world, const Vec3 *pos);
+void world_block_to_chunk_and_offset(World *world, const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset);
 
-void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *chunk_vec);
+void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset);
+
+u32 world_offset_to_index(World *world, const Vec3i *offset);
+
+bool world_is_chunk_in_bounds(World *world, const Vec3i *chunk_pos);
+
+bool world_is_block_in_bounds(World *world, const Vec3i *block_pos); 
 
 #endif

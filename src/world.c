@@ -2,27 +2,36 @@
 #include "include/block.h"
 #include "include/state.h"
 
-void world_create(World *world, u32 chunks_size)
+static void world_create_chunks(World *world)
 {
-	player_init(&world->player);
+	Vec3i *center = &world->player.chunk_pos;
+	Vec3i half_chunks_size;
+	zinc_vec3i_div(&world->chunks_size, 2, &half_chunks_size);
 
-	world->chunks_border_min = (Vec3i) ZINC_VEC3I_ZERO;
-	zinc_vec3i_scale(&world->chunks_border_min, CHUNK_SIZE, &world->chunks_border_min_in_blocks);
-	zinc_vec3i_add(&(Vec3i){{chunks_size, chunks_size, chunks_size}}, &world->chunks_border_min, &world->chunks_border_max);
-	zinc_vec3i_scale(&world->chunks_border_max, CHUNK_SIZE, &world->chunks_border_max_in_blocks);
+	zinc_vec3i_sub(center, &half_chunks_size, &world->origin);
 
-	world->chunks_size = chunks_size;
-	world->chunks = malloc(sizeof(Chunk) * WORLD_VOLUME(world));
-
-	for(u32 x = 0; x < chunks_size; x++){
-		for(u32 y = 0; y < chunks_size; y++){
-			for(u32 z = 0; z < chunks_size; z++){
-				Vec3i pos = {{x, y, z}};
-				chunk_create(&world->chunks[WORLD_POS_2_INDEX(world, pos)], &pos); 
+	for(i32 x = 0; x < world->chunks_size.x; x++){
+		for(i32 y = 0; y < world->chunks_size.y; y++){
+			for(i32 z = 0; z < world->chunks_size.z; z++){
+				Vec3i offset = {{x, y, z}};
+				Vec3i pos;
+				zinc_vec3i_add(&offset, &world->origin, &pos);
+				chunk_create(&world->chunks[world_offset_to_index(world, &offset)], &pos); 
 			}
 		}
 	}
 }
+
+void world_create(World *world, i32 size_x, i32 size_y, i32 size_z)
+{
+	player_init(&world->player);
+
+	world->chunks_size = (Vec3i){{size_x, size_y, size_z}};
+	world->chunks = malloc(sizeof(Chunk) * WORLD_VOLUME(world));
+
+	world_create_chunks(world);
+}
+
 
 void world_update(World *world, f32 dt)
 {
@@ -38,35 +47,48 @@ void world_render(World *world)
 
 	texture_bind(&state.block_atlas.texture);
 
-	for(u32 x = 0; x < world->chunks_size; x++){
-		for(u32 y = 0; y < world->chunks_size; y++){
-			for(u32 z = 0; z < world->chunks_size; z++){
-				Vec3i pos = {{x, y, z}};
-
-				chunk_render(&world->chunks[WORLD_POS_2_INDEX(world, pos)]);
+	for(i32 x = 0; x < world->chunks_size.x; x++){
+		for(i32 y = 0; y < world->chunks_size.y; y++){
+			for(i32 z = 0; z < world->chunks_size.z; z++){
+				Vec3i offset = {{x, y, z}};
+				chunk_render(&world->chunks[world_offset_to_index(world, &offset)]);
 			}
 		}
 	}
 }
 
-void world_get_chunk(World *world, const Vec3i *vec, Chunk **chunk, Vec3i *chunk_vec)
+Chunk *world_get_chunk(World *world, const Vec3i *chunk_pos)
 {
-	if(!WORLD_IN_BOUNDS(world, (*vec))) {
+	if(!world_is_chunk_in_bounds(world, chunk_pos)) return NULL;
+
+	Vec3i offset;
+	zinc_vec3i_sub(chunk_pos, &world->origin, &offset);
+	return world->chunks + world_offset_to_index(world, &offset);
+}
+
+void world_block_to_chunk_and_offset(World *world, const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset)
+{
+	if(!world_is_block_in_bounds(world, block_pos)){
 		*chunk = NULL;
 		return;
 	}
 
-	Vec3i chunk_pos;
-	zinc_vec3i_sub(vec, &world->chunks_border_min_in_blocks, &chunk_pos);
-	chunk_pos = (Vec3i) {{chunk_pos.x/CHUNK_SIZE,chunk_pos.y/CHUNK_SIZE,chunk_pos.z/CHUNK_SIZE}};
+	Vec3i origin_in_blocks;
+	zinc_vec3i_scale(&world->origin, CHUNK_SIZE, &origin_in_blocks);
 
-	*chunk = world->chunks + WORLD_POS_2_INDEX(world, chunk_pos);
-	*chunk_vec = (Vec3i) {{vec->x % CHUNK_SIZE, vec->y % CHUNK_SIZE, vec->z % CHUNK_SIZE}};
+	Vec3i offset;
+	zinc_vec3i_sub(block_pos, &origin_in_blocks, &offset);
+
+	Vec3i chunk_offset;
+	zinc_vec3i_div(&offset, CHUNK_SIZE, &chunk_offset);
+
+	*chunk = world->chunks + world_offset_to_index(world, &chunk_offset);
+	*block_offset = (Vec3i) {{offset.x % CHUNK_SIZE, offset.y % CHUNK_SIZE, offset.z % CHUNK_SIZE}};
 }
 
-void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *chunk_vec)
+void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset)
 {
-	Vec3i block_pos = WORLD_FPOS_2_IPOS((*origin));
+	Vec3i block_pos = POS_2_BLOCK((*origin));
 
 	f32 dx = dir->x;
 	f32 dy = dir->y;
@@ -122,11 +144,41 @@ void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_d
 			ray_len.z += unit_ray_len.z;
 		}
 
-		world_get_chunk(world, &block_pos, chunk, chunk_vec);
+		world_block_to_chunk_and_offset(world, &block_pos, chunk, block_offset);
 		if(*chunk){
-			u16 block_id = (*chunk)->data[CHUNK_POS_2_INDEX((*chunk_vec))] & BLOCK_ID_MASK;
+			u16 block_id = (*chunk)->data[CHUNK_POS_2_INDEX((*block_offset))] & BLOCK_ID_MASK;
 			if(!blocks[block_id].is_transparent) return;
 		}
 	}
 	*chunk = NULL;
+}
+
+inline u32 world_offset_to_index(World *world, const Vec3i *offset)
+{
+	return offset->x + offset->y*world->chunks_size.x + offset->z*world->chunks_size.x*world->chunks_size.y;
+}
+
+bool world_is_chunk_in_bounds(World *world, const Vec3i *chunk_pos)
+{
+	Vec3i end;
+	zinc_vec3i_add(&world->origin, &world->chunks_size, &end);
+
+	return
+		chunk_pos->x >= world->origin.x && chunk_pos->x < end.x && 
+		chunk_pos->y >= world->origin.y && chunk_pos->y < end.y && 
+		chunk_pos->z >= world->origin.z && chunk_pos->z < end.z;
+}
+
+bool world_is_block_in_bounds(World *world, const Vec3i *block_pos)
+{
+	Vec3i origin_in_blocks;
+	zinc_vec3i_scale(&world->origin, CHUNK_SIZE, &origin_in_blocks);
+	Vec3i end_in_blocks;
+	zinc_vec3i_add(&world->origin, &world->chunks_size, &end_in_blocks);
+	zinc_vec3i_scale(&end_in_blocks, CHUNK_SIZE, &end_in_blocks);
+
+	return
+		block_pos->x >= origin_in_blocks.x && block_pos->x < end_in_blocks.x && 
+		block_pos->y >= origin_in_blocks.y && block_pos->y < end_in_blocks.y && 
+		block_pos->z >= origin_in_blocks.z && block_pos->z < end_in_blocks.z;
 }

@@ -4,6 +4,7 @@
 #include "./world.h"
 #include "./shader.h"
 #include "./atlas.h"
+#include "./noise.h"
 
 enum ShaderType {
 	SHADER_CHUNK,
@@ -16,7 +17,10 @@ typedef struct State {
 	GLuint model_uniform, view_uniform, projection_uniform;
 	Atlas block_atlas;
 
+	Noise noise;
+
 	const u8 *keyboard;
+	bool mouse_buttons[2];
 } State;
 
 extern State state;

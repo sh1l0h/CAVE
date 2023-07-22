@@ -6,6 +6,7 @@
 typedef struct Player {
 	Camera camera;
 
+	Vec3i chunk_pos;
 	i32 selected_block;
 } Player;
 

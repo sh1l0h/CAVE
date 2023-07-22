@@ -49,15 +49,21 @@ typedef struct Chunk {
 
 void chunk_create(Chunk *chunk, const Vec3i *pos);
 
-void chunk_delete(const Chunk *chunk);
+void chunk_destroy(const Chunk *chunk);
 
 void chunk_update(Chunk *chunk);
 
 void chunk_render(Chunk *chunk);
 
+void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block);
+
 #define CHUNK_IN_BOUNDS(pos) (pos.x >= 0 && pos.x < CHUNK_SIZE &&	\
 							  pos.y >= 0 && pos.y < CHUNK_SIZE &&	\
 							  pos.z >= 0 && pos.z < CHUNK_SIZE)
+
+#define CHUNK_ON_BOUNDS(pos) (pos.x == 0 || pos.x == CHUNK_SIZE - 1 || \
+							  pos.y == 0 || pos.y == CHUNK_SIZE - 1 || \
+							  pos.z == 0 || pos.z == CHUNK_SIZE - 1)
 
 #define CHUNK_POS_2_INDEX(pos) (pos.x + pos.y*CHUNK_SIZE + pos.z*CHUNK_SIZE*CHUNK_SIZE)
 

@@ -55,6 +55,23 @@ u8 uv_offset[] = {
 	1, 0
 };
 
+f32 get_block_height(f32 noise)
+{
+	f32 result = 100.0f;
+	if(noise <= 0.3f){
+		result += noise*70.0f;
+		return result;
+	}
+
+	if(noise <= 0.4f){
+		result += 690.0f*noise - 186;
+		return result;
+	}
+
+	result += 50.0f*noise/3.0f + 250.0f/3.0f;
+	return result;
+}
+
 void chunk_create(Chunk *chunk, const Vec3i *pos)
 {
 	zinc_vec3i_copy(pos, &chunk->pos);
@@ -65,9 +82,13 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
 	for(i32 x = 0; x < CHUNK_SIZE; x++){
 		for(i32 y = 0; y < CHUNK_SIZE; y++){
 			for(i32 z = 0; z < CHUNK_SIZE; z++){
-				i32 _y = chunk->pos_in_blocks.y + y;
-				if(_y < 20)
-					chunk->data[CHUNK_POS_2_INDEX(((Vec3i){{x, y, z}}))] = BLOCK_GRASS;
+
+				Vec2 block_pos ={{(chunk->pos_in_blocks.x+x)/400.0f, (chunk->pos_in_blocks.z+z)/400.0f}};
+				f32 noise = noise_2d_octave_perlin(&state.noise, &block_pos, 3, 0.6f);
+				f32 _y = chunk->pos_in_blocks.y + y;
+				
+				if(_y <= get_block_height(noise))
+					chunk->data[CHUNK_POS_2_INDEX(((Vec3i){{x, y, z}}))] = BLOCK_STONE;
 				else
 					chunk->data[CHUNK_POS_2_INDEX(((Vec3i){{x, y, z}}))] = BLOCK_AIR;
 			}
@@ -99,10 +120,20 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
 }
 
-void chunk_update(Chunk *chunk)
+void chunk_destroy(const Chunk *chunk)
 {
-	chunk->pos.x = chunk->pos.x;
+	free(chunk->data);
+	mb_destroy(&chunk->vert_buffer);
+	mb_destroy(&chunk->index_buffer);
+	glDeleteBuffers(1, &chunk->VBO);
+	glDeleteBuffers(1, &chunk->IBO);
+	glDeleteVertexArrays(1, &chunk->VAO);
 }
+
+//void chunk_update(Chunk *chunk)
+//{
+//chunk->pos.x = chunk->pos.x;
+//}
 
 static void chunk_append_face(Chunk *chunk, Vec3i *pos, i32 direction, Vec2 *uv_min, Vec2 *uv_max)
 {
@@ -212,7 +243,7 @@ static void chunk_mesh(Chunk *chunk)
 
 						Chunk *neighbor_chunk;
 						Vec3i local_pos;
-						world_get_chunk(&state.world, &global_block_pos, &neighbor_chunk, &local_pos);
+						world_block_to_chunk_and_offset(&state.world, &global_block_pos, &neighbor_chunk, &local_pos);
 
 						if(!neighbor_chunk) continue;
 							
@@ -255,4 +286,45 @@ void chunk_render(Chunk *chunk)
 	glUniformMatrix4fv(state.model_uniform, 1, GL_TRUE, (GLfloat *)model);
 
 	glDrawElements(GL_TRIANGLES, chunk->index_count, GL_UNSIGNED_SHORT, 0);
+}
+
+void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
+{
+	chunk->data[CHUNK_POS_2_INDEX((*pos))] = block;
+	chunk->is_dirty = true;
+
+	if(CHUNK_ON_BOUNDS((*pos))){
+		Chunk *neighbors[3] = {NULL, NULL, NULL};
+
+		Vec3i tmp;
+		u32 index = 0;
+		if(pos->x == 0){
+			zinc_vec3i_add(&(Vec3i){{-1, 0, 0}}, &chunk->pos, &tmp);
+			neighbors[index++] = world_get_chunk(&state.world, &tmp);
+		}
+		else if(pos->x == CHUNK_SIZE - 1){
+			zinc_vec3i_add(&(Vec3i){{1, 0, 0}}, &chunk->pos, &tmp);
+			neighbors[index++] = world_get_chunk(&state.world, &tmp);
+		}
+		if(pos->y == 0){
+			zinc_vec3i_add(&(Vec3i){{0, -1, 0}}, &chunk->pos, &tmp);
+			neighbors[index++] = world_get_chunk(&state.world, &tmp);
+		}
+		else if(pos->y == CHUNK_SIZE - 1){
+			zinc_vec3i_add(&(Vec3i){{0, 1, 0}}, &chunk->pos, &tmp);
+			neighbors[index++] = world_get_chunk(&state.world, &tmp);
+		}
+		if(pos->z == 0){
+			zinc_vec3i_add(&(Vec3i){{0, 0, -1}}, &chunk->pos, &tmp);
+			neighbors[index++] = world_get_chunk(&state.world, &tmp);
+		}
+		else if(pos->z == CHUNK_SIZE - 1){
+			zinc_vec3i_add(&(Vec3i){{0, 0, 1}}, &chunk->pos, &tmp);
+			neighbors[index++] = world_get_chunk(&state.world, &tmp);
+		}
+
+		for(i32 i = 0; i < 3; i++){
+			if(neighbors[i]) neighbors[i]->is_dirty = true;
+		}
+	}
 }
