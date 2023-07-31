@@ -4,8 +4,11 @@
 #include "./util.h"
 #include "./chunk.h"
 #include "./player.h"
+#include "./chunk_list.h"
 
 #define WORLD_VOLUME(world) (world->chunks_size.x * world->chunks_size.y * world->chunks_size.z)
+
+#define CHUNK_COLUMN_HEIGHT 15
 
 typedef struct World {
 	Player player;
@@ -14,7 +17,11 @@ typedef struct World {
 	Vec3i origin;
 
 	// 3D array of active chunks
-	Chunk *chunks;
+	Chunk **chunks;
+	bool has_null_chunks;
+
+	//List of chunks that are loaded but inactive
+	ChunkList inactive_chunks;
 	
 	Vec3i chunks_size;
 } World;
@@ -25,11 +32,13 @@ void world_update(World *world, f32 dt);
 
 void world_render(World *world);
 
+void world_generate_chunk_column(World *world, Vec2i *column_position);
+
 Chunk *world_get_chunk(World *world, const Vec3i *chunk_pos);
 
 void world_block_to_chunk_and_offset(World *world, const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset);
 
-void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset);
+void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, i32 *facing_dir);
 
 u32 world_offset_to_index(World *world, const Vec3i *offset);
 

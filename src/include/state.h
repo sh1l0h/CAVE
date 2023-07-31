@@ -5,9 +5,12 @@
 #include "./shader.h"
 #include "./atlas.h"
 #include "./noise.h"
+#include "./block_marker.h"
+#include "./chunk_thread_pool.h"
 
 enum ShaderType {
 	SHADER_CHUNK,
+	SHADER_BLOCK_MARKER,
 	SHADER_COUNT
 };
 
@@ -16,8 +19,9 @@ typedef struct State {
 	Shader shaders[SHADER_COUNT];
 	GLuint model_uniform, view_uniform, projection_uniform;
 	Atlas block_atlas;
-
 	Noise noise;
+	BlockMarker block_marker;
+	ChunkThreadPool chunk_thread_pool;
 
 	const u8 *keyboard;
 	bool mouse_buttons[2];

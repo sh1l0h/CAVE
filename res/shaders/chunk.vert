@@ -7,7 +7,6 @@ layout (location = 2) in uint color;
 uniform mat4 model, view, projection;
 
 out vec2 vert_uv;
-out vec3 vert_pos;
 out float vert_brightness;
 
 void main() 
@@ -16,5 +15,4 @@ void main()
 
     vert_uv = uv;
     vert_brightness = float(color) / 15.0f;
-    vert_pos = position;
 }

@@ -18,6 +18,8 @@ enum Direction {
     DIR_BOTTOM
 };
 
+void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest);
+
 #define POS_2_BLOCK(pos) {{(i32)floorf(pos.x), (i32)floorf(pos.y), (i32)floorf(pos.z)}}   
 
 #define POS_2_CHUNK(pos) {{(i32)floorf(pos.x) / CHUNK_SIZE, (i32)floorf(pos.y) / CHUNK_SIZE, (i32)floorf(pos.z) / CHUNK_SIZE}}

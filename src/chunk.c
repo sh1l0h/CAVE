@@ -55,22 +55,34 @@ u8 uv_offset[] = {
 	1, 0
 };
 
-f32 get_block_height(f32 noise)
-{
-	f32 result = 100.0f;
-	if(noise <= 0.3f){
-		result += noise*70.0f;
-		return result;
-	}
 
-	if(noise <= 0.4f){
-		result += 690.0f*noise - 186;
-		return result;
-	}
-
-	result += 50.0f*noise/3.0f + 250.0f/3.0f;
-	return result;
-}
+//u16 chunk_generate_block(Chunk *chunk, Vec3i *offset)
+//{
+//Vec3 block_pos ={{
+//chunk->pos_in_blocks.x + offset->x,
+//chunk->pos_in_blocks.y + offset->y,
+//chunk->pos_in_blocks.z + offset->z
+//}};
+//
+//Vec3 noise_1_scaled_block_pos;
+//zinc_vec3_scale(&block_pos, 1/60.0f, &noise_1_scaled_block_pos);
+//	
+//f32 noise_1 = noise_3d_ridged_perlin(&state.noise, &noise_1_scaled_block_pos, 1, .5f, 2.0f, 0.5f);
+//	
+//zinc_vec3_add(&noise_1_scaled_block_pos, &(Vec3){{200.0f,200.0f,200.0f}}, &noise_1_scaled_block_pos);
+//f32 noise_2 = noise_3d_ridged_perlin(&state.noise, &noise_1_scaled_block_pos, 1, .5f, 2.0f, 0.5f);
+//	
+//Vec3 cheese_scaled_pos;
+//zinc_vec3_scale(&block_pos, 1/300.0f, &cheese_scaled_pos);
+//f32 cheese = noise_3d_octave_perlin(&state.noise, &cheese_scaled_pos, 4, 0.5f);
+//	
+//if((noise_1 >= 0.92 && noise_2 >= .92) || cheese > 0.3) return BLOCK_AIR;
+//	
+//	
+//
+//if(block_pos.y < height_spline(mountain_noise) && noise_3d + dencity_bias(block_pos.y) > 0.0) return BLOCK_STONE;
+//else return BLOCK_AIR;
+//}
 
 void chunk_create(Chunk *chunk, const Vec3i *pos)
 {
@@ -79,22 +91,6 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
 
 	chunk->data = calloc(CHUNK_VOLUME, sizeof(u32));
 
-	for(i32 x = 0; x < CHUNK_SIZE; x++){
-		for(i32 y = 0; y < CHUNK_SIZE; y++){
-			for(i32 z = 0; z < CHUNK_SIZE; z++){
-
-				Vec2 block_pos ={{(chunk->pos_in_blocks.x+x)/400.0f, (chunk->pos_in_blocks.z+z)/400.0f}};
-				f32 noise = noise_2d_octave_perlin(&state.noise, &block_pos, 3, 0.6f);
-				f32 _y = chunk->pos_in_blocks.y + y;
-				
-				if(_y <= get_block_height(noise))
-					chunk->data[CHUNK_POS_2_INDEX(((Vec3i){{x, y, z}}))] = BLOCK_STONE;
-				else
-					chunk->data[CHUNK_POS_2_INDEX(((Vec3i){{x, y, z}}))] = BLOCK_AIR;
-			}
-		}
-	}
-
 	chunk->block_count = 0;
 	chunk->is_dirty = true;
 
@@ -102,6 +98,11 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
 	mb_create(&chunk->index_buffer, CHUNK_VOLUME*36);
 	chunk->vert_count = chunk->index_count = 0;
 
+	chunk->has_gl = false;
+}
+
+void chunk_init_gl(Chunk *chunk)
+{
 	glGenVertexArrays(1, &chunk->VAO);
 	glBindVertexArray(chunk->VAO);
 
@@ -118,6 +119,8 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
 
 	glGenBuffers(1, &chunk->IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
+
+	chunk->has_gl = true;
 }
 
 void chunk_destroy(const Chunk *chunk)
@@ -185,7 +188,7 @@ static void chunk_append_face(Chunk *chunk, Vec3i *pos, i32 direction, Vec2 *uv_
 	chunk->index_count += 6;
 }
 
-static void get_facing_block_pos(const Vec3i *pos, i32 dir, Vec3i *dest)
+void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest)
 {
 	zinc_vec3i_copy(pos, dest);
 	switch(dir){
@@ -224,17 +227,17 @@ static void chunk_mesh(Chunk *chunk)
 		for(i32 y = 0; y < CHUNK_SIZE; y++){
 			for(i32 z = 0; z < CHUNK_SIZE; z++){
 				Vec3i pos = {{x, y, z}};
-				u32 data = chunk->data[CHUNK_POS_2_INDEX(pos)];
+				u32 data = chunk->data[CHUNK_OFFSET_2_INDEX(pos)];
 				u16 id = data & BLOCK_ID_MASK;
 
 				if(id == BLOCK_AIR) continue;
 
 				for(i32 dir = 0; dir < 6; dir++){
 					Vec3i facing_block_pos;
-					get_facing_block_pos(&pos, dir, &facing_block_pos);
+					get_facing_block_offset(&pos, dir, &facing_block_pos);
 
 					if(CHUNK_IN_BOUNDS(facing_block_pos)){
-						u16 block_id = chunk->data[CHUNK_POS_2_INDEX(facing_block_pos)] & BLOCK_ID_MASK;
+						u16 block_id = chunk->data[CHUNK_OFFSET_2_INDEX(facing_block_pos)] & BLOCK_ID_MASK;
 						if(!blocks[block_id].is_transparent) continue;
 					}
 					else{
@@ -247,7 +250,7 @@ static void chunk_mesh(Chunk *chunk)
 
 						if(!neighbor_chunk) continue;
 							
-						u16 block_id = neighbor_chunk->data[CHUNK_POS_2_INDEX(local_pos)] & BLOCK_ID_MASK;
+						u16 block_id = neighbor_chunk->data[CHUNK_OFFSET_2_INDEX(local_pos)] & BLOCK_ID_MASK;
 						if(!blocks[block_id].is_transparent) continue;
 					}
 
@@ -266,6 +269,10 @@ static void chunk_mesh(Chunk *chunk)
 
 void chunk_render(Chunk *chunk)
 {
+	if(!chunk) return;
+
+	if(chunk->block_count == 0) return;
+
 	glBindVertexArray(chunk->VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
@@ -290,8 +297,12 @@ void chunk_render(Chunk *chunk)
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 {
-	chunk->data[CHUNK_POS_2_INDEX((*pos))] = block;
+	if(block == BLOCK_AIR) chunk->block_count--;
+	else if(chunk->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR) chunk->block_count++;
+
+	chunk->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
 	chunk->is_dirty = true;
+
 
 	if(CHUNK_ON_BOUNDS((*pos))){
 		Chunk *neighbors[3] = {NULL, NULL, NULL};

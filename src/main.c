@@ -2,9 +2,11 @@
 #include <GL/gl.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include <time.h>
 #include "include/state.h"
 #include "include/block.h"
 #include "include/noise.h"
+#include "include/block_marker.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
@@ -21,38 +23,43 @@ void init()
 	state.view_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "view");
 	state.projection_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "projection");
 
+	shader_create(&state.shaders[SHADER_BLOCK_MARKER], "./res/shaders/block_marker.vert", "./res/shaders/block_marker.frag");
+
 	atlas_create(&state.block_atlas, "./res/imgs/block_textures.png", 16, 16);
 
 	block_init();
 
-	state.world.player.camera.transform.position = (Vec3) {{10.0f, 21.0f, 10.0f}};
-
 	state.keyboard = SDL_GetKeyboardState(NULL);
+	ctp_create(&state.chunk_thread_pool);
 
-	noise_create(&state.noise, 100);
+	//432134
+	noise_create(&state.noise, time(NULL));
 
-	world_create(&state.world, 10, 30, 10);
+	bm_create(&state.block_marker, &(Vec4){{0.6f, 0.6f, 0.6f, 1.0f}});
+
+	world_create(&state.world, 30, 15, 30);
+
+	state.world.player.camera.transform.position = (Vec3) {{10.0f, 100.0f, 10.0f}};
 }
 
 void tmp()
 {
-    int width = 500; // Adjust the image dimensions as per your requirement
+    int width = 500;
     int height = 500;
-    int channels = 1; // Grayscale has one channel (luminance)
+    int channels = 1;
 
     unsigned char *pixels = (unsigned char *)malloc(width * height * channels);
-    float scale = 50.0f; // Adjust the scale to control the noise intensity
+    float scale = 500.0f; 
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-			Vec2 pos = {{10.0f + x / scale,10.0f + y / scale}};
-			float noise_value = noise_2d_octave_perlin(&state.noise, &pos, 4, 0.8f);
+			Vec2 pos = {{x / scale,+ y / scale}};
+			float noise_value = noise_2d_ridged_perlin(&state.noise, &pos, 4, 0.25f, 1.9f, 0.3f);
             unsigned char value = (unsigned char)((noise_value + 1.0f) * 0.5f * 255.0f);
             pixels[y * width + x] = value;
         }
     }
 
-    // Save the image as PNG
     stbi_write_png("grayscale_noise.png", width, height, channels, pixels, width * channels);
 
     free(pixels);
@@ -128,8 +135,17 @@ int main()
 				break;
 
 			case SDL_WINDOWEVENT:
-				if(event.window.event == SDL_WINDOWEVENT_RESIZED){
+				switch (event.window.event) {
+				case SDL_WINDOWEVENT_RESIZED:
 					glViewport(0, 0, event.window.data1, event.window.data2);
+					break;
+				case SDL_WINDOWEVENT_FOCUS_LOST:
+					SDL_SetRelativeMouseMode(SDL_FALSE);
+					break;
+				case SDL_WINDOWEVENT_FOCUS_GAINED:
+					SDL_SetRelativeMouseMode(SDL_TRUE);
+					break;
+					
 				}
 				break;
 
@@ -137,15 +153,13 @@ int main()
 				{
 					SDL_MouseButtonEvent button = event.button;
 					if(button.button == SDL_BUTTON_LEFT){
-						Chunk *selected_block_chunk;
-						Vec3i selected_block;
-						world_cast_ray(&state.world, &state.world.player.camera.transform.position, &state.world.player.camera.transform.forward, 5.0f, &selected_block_chunk, &selected_block);
-
-						if(selected_block_chunk){
-							chunk_set_block(selected_block_chunk, &selected_block, BLOCK_AIR);
+						if(state.world.player.selected_block_chunk){
+							chunk_set_block(state.world.player.selected_block_chunk, &state.world.player.selected_block_offset, BLOCK_AIR);
 						}
 					}
-					else if(button.button == SDL_BUTTON_RIGHT) state.mouse_buttons[1] = true;
+					else if(button.button == SDL_BUTTON_RIGHT){
+						player_place_block(&state.world.player);
+					}
 				}
 				break;
 			case SDL_MOUSEBUTTONUP:
@@ -171,14 +185,21 @@ int main()
 
 		if(is_updated){
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 			world_render(&state.world);
+			if(state.world.player.selected_block_chunk){
+				Vec3i block_marker_pos;
+				zinc_vec3i_add(&state.world.player.selected_block_chunk->pos_in_blocks, &state.world.player.selected_block_offset, &block_marker_pos);
+				bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, state.world.player.selected_block_dir);
+			}
 			SDL_GL_SwapWindow(window);
 
 			is_updated = false;
 		}
-
+		SDL_Delay(1);
 	}
 
+	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_GL_DeleteContext(context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();

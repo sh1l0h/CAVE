@@ -14,7 +14,6 @@
 #define BLOCK_LIGHT_MASK 0xFFFFF000
 #define BLOCK_LIGHT_OFFSET 12
 
-
 #include "./util.h"
 #include <GL/glew.h>
 #include "./mesh_buffer.h"
@@ -44,10 +43,15 @@ typedef struct Chunk {
 	u32 vert_count;
 	u32 index_count;
 
+	bool has_gl;
 	GLuint VAO, VBO, IBO;
 } Chunk;
 
+u16 chunk_generate_block(Chunk *chunk, Vec3i *offset);
+
 void chunk_create(Chunk *chunk, const Vec3i *pos);
+
+void chunk_init_gl(Chunk *chunk);
 
 void chunk_destroy(const Chunk *chunk);
 
@@ -65,6 +69,6 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block);
 							  pos.y == 0 || pos.y == CHUNK_SIZE - 1 || \
 							  pos.z == 0 || pos.z == CHUNK_SIZE - 1)
 
-#define CHUNK_POS_2_INDEX(pos) (pos.x + pos.y*CHUNK_SIZE + pos.z*CHUNK_SIZE*CHUNK_SIZE)
+#define CHUNK_OFFSET_2_INDEX(pos) (pos.x + pos.y*CHUNK_SIZE + pos.z*CHUNK_SIZE*CHUNK_SIZE)
 
 #endif

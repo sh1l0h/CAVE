@@ -25,6 +25,9 @@ add_executable(${PROJECT_NAME}
     src/transform.c
     src/mesh_buffer.c
     src/noise.c
+    src/block_marker.c
+    src/chunk_list.c
+    src/chunk_thread_pool.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
