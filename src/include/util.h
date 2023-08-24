@@ -24,8 +24,13 @@ void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest);
 
 #define POS_2_CHUNK(pos) {{(i32)floorf(pos.x) / CHUNK_SIZE, (i32)floorf(pos.y) / CHUNK_SIZE, (i32)floorf(pos.z) / CHUNK_SIZE}}
 
-#define BLOCK_2_CHUNK(pos) {{pos.x < 0 ? (pos.x - CHUNK_SIZE + 1) / CHUNK_SIZE  : pos.x / CHUNK_SIZE, \
+#define BLOCK_2_CHUNK(pos) {{pos.x < 0 ? (pos.x - CHUNK_SIZE + 1) / CHUNK_SIZE : pos.x / CHUNK_SIZE, \
 				pos.y < 0 ? (pos.y - CHUNK_SIZE + 1)/ CHUNK_SIZE : pos.y / CHUNK_SIZE, \
 				pos.z < 0 ? (pos.z - CHUNK_SIZE + 1)/ CHUNK_SIZE : pos.z / CHUNK_SIZE}}
+
+u32 vec3i_hash(void *element);
+
+i32 vec3i_cmp(void *element, void *arg);
+
 
 #endif

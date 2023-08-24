@@ -5,13 +5,13 @@
 
 typedef struct MeshBuffer {
 	void *data;
+	u32 allocated_bytes;
 
-	//all in bytes
-	u32 capacity;
+	//in bytes
 	u32 index;
 } MeshBuffer;
 
-void mb_create(MeshBuffer *mb, u32 capacity);
+void mb_create(MeshBuffer *mb, u32 initial_size);
 void mb_destroy(const MeshBuffer *mb);
 
 void mb_clean(MeshBuffer *mb);

@@ -1,5 +1,5 @@
 #include "include/chunk_thread_pool.h"
-#include "include/state.h"
+#include "include/world.h"
 
 static int ctp_worker(void *arg)
 {
@@ -21,13 +21,17 @@ static int ctp_worker(void *arg)
 
 		SDL_UnlockMutex(pool->mutex);
 		
+		void *result = NULL;
 		switch(task->type){
 		case TASK_GEN_COLUMN:
-			world_generate_chunk_column(&state.world, (Vec2i *)task->arg);
-			free(task->arg);
+			result = world_generate_chunk_column((Vec2i *)task->arg);
 			break;
 		}
-		free(task);
+
+		SDL_LockMutex(task->mutex);
+		task->is_complete = true;
+		task->result = result;
+		SDL_UnlockMutex(task->mutex);
 
 		SDL_LockMutex(pool->mutex);
 		pool->working_count--;
@@ -38,6 +42,16 @@ static int ctp_worker(void *arg)
 	return 0;
 }
 
+ChunkThreadTask *ctp_create_task(i32 type, void *arg)
+{
+	ChunkThreadTask *result = malloc(sizeof(ChunkThreadTask));
+	result->type = type;
+	result->arg = arg;
+	result->next = NULL;
+	result->is_complete = false;
+	result->mutex = SDL_CreateMutex();
+	return result;
+}
 
 void ctp_create(ChunkThreadPool *pool)
 {

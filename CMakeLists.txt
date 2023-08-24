@@ -26,8 +26,9 @@ add_executable(${PROJECT_NAME}
     src/mesh_buffer.c
     src/noise.c
     src/block_marker.c
-    src/chunk_list.c
+    src/hash_map.c
     src/chunk_thread_pool.c
+    src/linked_list.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -37,10 +38,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     GLEW
     m
     )
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(${PROJECT_NAME} PRIVATE -g -O0)
+    target_compile_options(${PROJECT_NAME} PRIVATE -g)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(${PROJECT_NAME} PRIVATE -O3)
 endif()

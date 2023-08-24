@@ -17,7 +17,7 @@ enum ShaderType {
 typedef struct State {
 	World world;
 	Shader shaders[SHADER_COUNT];
-	GLuint model_uniform, view_uniform, projection_uniform;
+	GLuint model_uniform, view_uniform, projection_uniform, uv_offset_uniform;
 	Atlas block_atlas;
 	Noise noise;
 	BlockMarker block_marker;

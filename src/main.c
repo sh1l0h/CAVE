@@ -22,6 +22,7 @@ void init()
 	state.model_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "model");
 	state.view_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "view");
 	state.projection_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "projection");
+	state.uv_offset_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "uv_offset");
 
 	shader_create(&state.shaders[SHADER_BLOCK_MARKER], "./res/shaders/block_marker.vert", "./res/shaders/block_marker.frag");
 
@@ -33,36 +34,13 @@ void init()
 	ctp_create(&state.chunk_thread_pool);
 
 	//432134
-	noise_create(&state.noise, time(NULL));
+	noise_create(&state.noise, 432134);
 
 	bm_create(&state.block_marker, &(Vec4){{0.6f, 0.6f, 0.6f, 1.0f}});
 
-	world_create(&state.world, 30, 15, 30);
+	world_create(&state.world, 16, 15, 16);
 
-	state.world.player.camera.transform.position = (Vec3) {{10.0f, 100.0f, 10.0f}};
-}
-
-void tmp()
-{
-    int width = 500;
-    int height = 500;
-    int channels = 1;
-
-    unsigned char *pixels = (unsigned char *)malloc(width * height * channels);
-    float scale = 500.0f; 
-
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-			Vec2 pos = {{x / scale,+ y / scale}};
-			float noise_value = noise_2d_ridged_perlin(&state.noise, &pos, 4, 0.25f, 1.9f, 0.3f);
-            unsigned char value = (unsigned char)((noise_value + 1.0f) * 0.5f * 255.0f);
-            pixels[y * width + x] = value;
-        }
-    }
-
-    stbi_write_png("grayscale_noise.png", width, height, channels, pixels, width * channels);
-
-    free(pixels);
+	state.world.player.camera.transform.position = (Vec3) {{400.0f, 100.0f, 400.0f}};
 }
 
 int main()
@@ -101,25 +79,28 @@ int main()
 		return 0;
 	}
 
+	SDL_GL_SetSwapInterval(0);
+
 	glEnable(GL_DEPTH_TEST);
 	glViewport(0, 0, 1280, 720);
 	glClearColor(0.5f, 0.8f, 0.98f, 1.0f);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 	init();
-	tmp();
 
 	u32 last_time = SDL_GetTicks();
 	u32 time_to_process = 0;
 	const u32 ms_per_update = 1000 / UPDATES_PER_SECOND;
+	u32 second_count = 0;
+	u32 frame_count = 0;
 
-	bool is_updated= false;
 	bool quit = false;
 	while(!quit){
 		u32 curr_time = SDL_GetTicks();
 		u32 delta_time = curr_time - last_time;
 		last_time = curr_time;
 		time_to_process += delta_time;
+		second_count += delta_time;
 
 		SDL_Event event;
 		while(SDL_PollEvent(&event)){
@@ -179,23 +160,29 @@ int main()
 		while(time_to_process >= ms_per_update){
 			world_update(&state.world, 1.0f/ UPDATES_PER_SECOND);
 
-			is_updated = true;
 			time_to_process -= ms_per_update;
 		}
 
-		if(is_updated){
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		world_render(&state.world);
+		frame_count++;
 
-			world_render(&state.world);
-			if(state.world.player.selected_block_chunk){
-				Vec3i block_marker_pos;
-				zinc_vec3i_add(&state.world.player.selected_block_chunk->pos_in_blocks, &state.world.player.selected_block_offset, &block_marker_pos);
-				bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, state.world.player.selected_block_dir);
-			}
-			SDL_GL_SwapWindow(window);
-
-			is_updated = false;
+		if(second_count >= 1000){
+			printf("FPS: %f\n", frame_count*1000.0f/second_count);
+			second_count = 0;
+			frame_count = 0;
 		}
+		
+		if(state.world.player.selected_block_chunk){
+			Vec3i block_marker_pos;
+			Chunk *selected_chunk = state.world.player.selected_block_chunk;
+			zinc_vec3i_scale(&selected_chunk->position, CHUNK_SIZE, &block_marker_pos);
+			zinc_vec3i_add(&block_marker_pos, &state.world.player.selected_block_offset, &block_marker_pos);
+			bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, state.world.player.selected_block_dir);
+		}
+
+		SDL_GL_SwapWindow(window);
+
 		SDL_Delay(1);
 	}
 

@@ -78,7 +78,9 @@ void player_place_block(Player *player)
 		chunk_set_block(player->selected_block_chunk, &block_offset, BLOCK_COBBLESTONE);
 		return;
 	}
-	zinc_vec3i_add(&block_offset, &player->selected_block_chunk->pos_in_blocks, &block_offset);
+	Vec3i pos_in_blocks;
+	zinc_vec3i_scale(&player->selected_block_chunk->position, CHUNK_SIZE, &pos_in_blocks);
+	zinc_vec3i_add(&block_offset, &pos_in_blocks, &block_offset);
 
 	Chunk *chunk;
 	world_block_to_chunk_and_offset(&state.world, &block_offset, &chunk, &block_offset);

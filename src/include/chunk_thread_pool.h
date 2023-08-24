@@ -14,6 +14,10 @@ typedef struct ChunkThreadTask {
 	i32 type;
 	void *arg;
 	struct ChunkThreadTask *next;
+
+	SDL_mutex *mutex;
+	bool is_complete;
+	void *result;
 } ChunkThreadTask;
 
 typedef struct ChunkThreadPool {
@@ -21,12 +25,16 @@ typedef struct ChunkThreadPool {
 	ChunkThreadTask *task_queue_head;
 	ChunkThreadTask *task_queue_tail;
 	u32 task_count;
+
 	SDL_mutex *mutex;
 	SDL_cond *cond_empty;
 	u32 working_count;
 	SDL_cond *cond_work;
+
 	bool stop;
 } ChunkThreadPool;
+
+ChunkThreadTask *ctp_create_task(i32 type, void *arg);
 
 void ctp_create(ChunkThreadPool *pool); 
 void ctp_destroy(ChunkThreadPool *pool);
