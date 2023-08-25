@@ -24,7 +24,10 @@ static int ctp_worker(void *arg)
 		void *result = NULL;
 		switch(task->type){
 		case TASK_GEN_COLUMN:
-			result = world_generate_chunk_column((Vec2i *)task->arg);
+			result = world_generate_chunk_column(task->arg);
+			break;
+		case TASK_MESH_CHUNK:
+			result = chunk_mesh(task->arg);
 			break;
 		}
 

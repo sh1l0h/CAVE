@@ -7,7 +7,8 @@
 #define CHUNK_THREAD_COUNT 3
 
 enum ChunkThreadTaskType {
-	TASK_GEN_COLUMN
+	TASK_GEN_COLUMN,
+	TASK_MESH_CHUNK
 };
 
 typedef struct ChunkThreadTask {

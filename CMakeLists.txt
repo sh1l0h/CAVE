@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}
     src/hash_map.c
     src/chunk_thread_pool.c
     src/linked_list.c
+    src/mesh.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

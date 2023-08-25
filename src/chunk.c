@@ -91,9 +91,7 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
 	chunk->block_count = 0;
 	chunk->is_dirty = true;
 
-	mb_create(&chunk->vert_buffer, CHUNK_VOLUME*4);
-	mb_create(&chunk->index_buffer, CHUNK_VOLUME*4);
-	chunk->vert_count = chunk->index_count = 0;
+	chunk->index_count = 0;
 }
 
 void chunk_init_buffers(Chunk *chunk)
@@ -116,8 +114,6 @@ void chunk_init_buffers(Chunk *chunk)
 void chunk_destroy(const Chunk *chunk)
 {
 	free(chunk->data);
-	mb_destroy(&chunk->vert_buffer);
-	mb_destroy(&chunk->index_buffer);
 	glDeleteBuffers(1, &chunk->VBO);
 	glDeleteBuffers(1, &chunk->IBO);
 	glDeleteVertexArrays(1, &chunk->VAO);
@@ -128,7 +124,7 @@ void chunk_destroy(const Chunk *chunk)
 //chunk->position.x = chunk->position.x;
 //}
 
-static void chunk_append_face(Chunk *chunk, Vec3i *pos, i32 direction, Vec2i *uv)
+static void chunk_append_face(Mesh *mesh, Vec3i *pos, i32 direction, Vec2i *uv)
 {
 	u32 origin_x = pos->x + direction_offset[direction*3];
 	u32 origin_y = pos->y + direction_offset[direction*3 + 1];
@@ -162,16 +158,16 @@ static void chunk_append_face(Chunk *chunk, Vec3i *pos, i32 direction, Vec2i *uv
 
 		u32 vertex = ((brightness & 0xFu) << 25) | ((v & 0x1Fu) << 20) | ((u & 0x1Fu) << 15) | ((z & 0x1Fu) << 10) | ((y & 0x1Fu) << 5)  | (x & 0x1Fu);
 		
-		mb_append(&chunk->vert_buffer, (void *) &vertex, sizeof(u32));
+		mb_append(&mesh->vert_buffer, (void *) &vertex, sizeof(u32));
 	}
 
 	for(u32 i = 0; i < 6; i++){
-		u16 index = chunk->vert_count + index_offset[i];
-		mb_append(&chunk->index_buffer, (void *) &index, sizeof(u16));
+		u16 index = mesh->vert_count + index_offset[i];
+		mb_append(&mesh->index_buffer, (void *) &index, sizeof(u16));
 	}
 
-	chunk->vert_count += 4;
-	chunk->index_count += 6;
+	mesh->vert_count += 4;
+	mesh->index_count += 6;
 }
 
 void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest)
@@ -201,53 +197,59 @@ void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest)
 	}
 }
 
-void chunk_mesh(Chunk *chunk)
+Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 {
-	chunk->vert_count = 0;
-	chunk->index_count = 0;
-	
-	mb_clean(&chunk->vert_buffer);
-	mb_clean(&chunk->index_buffer);
+	Mesh *result = malloc(sizeof(Mesh));
+
+	mesh_create(result);
 
 	for(i32 z = 0; z < CHUNK_SIZE; z++){
 		for(i32 y = 0; y < CHUNK_SIZE; y++){
 			for(i32 x = 0; x < CHUNK_SIZE; x++){
-				Vec3i pos = {{x, y, z}};
-				u32 data = chunk->data[CHUNK_OFFSET_2_INDEX(pos)];
+
+				Vec3i offset = {{x, y, z}};
+				u32 data = arg->chunk_data[CHUNK_OFFSET_2_INDEX(offset)];
 				u16 id = data & BLOCK_ID_MASK;
 
 				if(id == BLOCK_AIR) continue;
 
 				for(i32 dir = 0; dir < 6; dir++){
 					Vec3i facing_block_pos;
-					get_facing_block_offset(&pos, dir, &facing_block_pos);
+					get_facing_block_offset(&offset, dir, &facing_block_pos);
 
 					if(CHUNK_IN_BOUNDS(facing_block_pos)){
-						u16 block_id = chunk->data[CHUNK_OFFSET_2_INDEX(facing_block_pos)] & BLOCK_ID_MASK;
+						u16 block_id = arg->chunk_data[CHUNK_OFFSET_2_INDEX(facing_block_pos)] & BLOCK_ID_MASK;
 						if(!blocks[block_id].is_transparent) continue;
 					}
+					else if(arg->neighbors_data[dir] == NULL) continue; 
 					else{
-						Vec3i global_block_pos;
-						zinc_vec3i_scale(&chunk->position, CHUNK_SIZE, &global_block_pos);
-						zinc_vec3i_add(&facing_block_pos, &global_block_pos, &global_block_pos);
+						bool is_transparent = false;
+						switch(dir){
+						case DIR_NORTH:
+						case DIR_SOUTH:
+							is_transparent = arg->neighbors_data[dir][y + x*CHUNK_SIZE];
+							break;
+						case DIR_EAST:
+						case DIR_WEST:
+							is_transparent = arg->neighbors_data[dir][y + z*CHUNK_SIZE];
+							break;
+						case DIR_TOP:
+						case DIR_BOTTOM:
+							is_transparent = arg->neighbors_data[dir][x + z*CHUNK_SIZE];
+							break;
+						}
 
-						Chunk *neighbor_chunk;
-						Vec3i local_pos;
-						world_block_to_chunk_and_offset(&state.world, &global_block_pos, &neighbor_chunk, &local_pos);
-
-						if(!neighbor_chunk) continue;
-							
-						u16 block_id = neighbor_chunk->data[CHUNK_OFFSET_2_INDEX(local_pos)] & BLOCK_ID_MASK;
-						if(!blocks[block_id].is_transparent) continue;
+						if(is_transparent) continue;
 					}
 
 					Vec2i sprite_pos;
 					blocks[id].get_sprite_position(&sprite_pos, dir);
-					chunk_append_face(chunk, &pos, dir, &sprite_pos);
+					chunk_append_face(result, &offset, dir, &sprite_pos);
 				}
 			}
 		}
 	}
+	return result;
 }
 
 void chunk_render(Chunk *chunk)
@@ -256,19 +258,71 @@ void chunk_render(Chunk *chunk)
 
 	if(chunk->block_count == 0) return;
 
-	glBindVertexArray(chunk->VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
+	if(chunk->is_dirty){
+		World *world = &state.world;
 
-	if(chunk->is_dirty && state.world.meshed_count <= CHUNKS_MESHED_IN_FRAME) {
-		chunk_mesh(chunk);
-		state.world.meshed_count++;
+		struct ChunkMeshArg *arg = malloc(sizeof(struct ChunkMeshArg));
 
-		glBufferData(GL_ARRAY_BUFFER, chunk->vert_buffer.index, chunk->vert_buffer.data, GL_DYNAMIC_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, chunk->index_buffer.index, chunk->index_buffer.data, GL_DYNAMIC_DRAW);
+		zinc_vec3i_copy(&chunk->position, &arg->chunk_pos);
+
+		arg->chunk_data = malloc(sizeof(u16)*CHUNK_VOLUME);
+		memcpy(arg->chunk_data, chunk->data, sizeof(u16)*CHUNK_VOLUME);
+
+		for(i32 dir = 0; dir < 6; dir++){
+			Vec3i neighbor_pos;
+			get_facing_block_offset(&chunk->position, dir, &neighbor_pos);
+			Chunk *neighbor_chunk = world_get_chunk(world, &neighbor_pos);
+
+			if(neighbor_chunk == NULL){
+				arg->neighbors_data[dir] = NULL;
+				continue;
+			}
+
+			arg->neighbors_data[dir] = malloc(sizeof(bool)*CHUNK_SIZE*CHUNK_SIZE);
+
+			for(i32 i = 0; i < CHUNK_SIZE; i++){
+				for(i32 j = 0; j < CHUNK_SIZE; j++){
+					Vec3i block_offset;
+					switch(dir){
+					case DIR_NORTH:
+						block_offset.x = i; block_offset.y = j; block_offset.z = 0;
+						break;
+					case DIR_EAST:
+						block_offset.x = 0; block_offset.y = j; block_offset.z = i;
+						break;
+					case DIR_SOUTH:
+						block_offset.x = i; block_offset.y = j; block_offset.z = CHUNK_SIZE - 1;
+						break;
+					case DIR_WEST:
+						block_offset.x = CHUNK_SIZE - 1; block_offset.y = j; block_offset.z = i;
+						break;
+					case DIR_TOP:
+						block_offset.x = j; block_offset.y = 0; block_offset.z = i;
+						break;
+					case DIR_BOTTOM:
+						block_offset.x = j; block_offset.y = CHUNK_SIZE - 1; block_offset.z = i;
+						break;
+					}
+					u16 block_id = neighbor_chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)] & BLOCK_ID_MASK;
+					arg->neighbors_data[dir][j + i*CHUNK_SIZE] = !blocks[block_id].is_transparent;
+				}
+			}
+
+		}
+
+		ChunkThreadTask *task = ctp_create_task(TASK_MESH_CHUNK, arg);
+
+		ll_add(&world->tasks, task);
+		ctp_add_task(&state.chunk_thread_pool, task);
 
 		chunk->is_dirty = false;
 	}
+
+	if(chunk->index_count == 0) return;
+
+	glBindVertexArray(chunk->VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
 
 	Vec3 pos = {{chunk->position.x*CHUNK_SIZE, chunk->position.y*CHUNK_SIZE, chunk->position.z*CHUNK_SIZE}};
 

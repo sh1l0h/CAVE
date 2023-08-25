@@ -10,7 +10,6 @@
 #define WORLD_VOLUME(world) (world->chunks_size.x * world->chunks_size.y * world->chunks_size.z)
 
 #define CHUNK_COLUMN_HEIGHT 15
-#define CHUNKS_MESHED_IN_FRAME 50
 
 typedef struct World {
 	Player player;
@@ -30,8 +29,6 @@ typedef struct World {
 
 	// HashMap of chunks that are loaded but inactive
 	HashMap inactive_chunks;
-
-	u32 meshed_count;
 } World;
 
 void world_create(World *world, i32 size_x, i32 size_y, i32 size_z);

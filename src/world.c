@@ -187,6 +187,30 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 			free(column);
 		}
 		break;
+	case TASK_MESH_CHUNK:
+		{
+			struct ChunkMeshArg *arg = task->arg;
+			Mesh *mesh = task->result;
+
+			Chunk *chunk = world_get_chunk(world, &arg->chunk_pos);
+			if(chunk == NULL) chunk = hm_get(&world->inactive_chunks, &arg->chunk_pos);
+
+			if(chunk != NULL){
+				glBindVertexArray(chunk->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
+
+				glBufferData(GL_ARRAY_BUFFER, mesh->vert_buffer.index, mesh->vert_buffer.data, GL_DYNAMIC_DRAW);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer.index, mesh->index_buffer.data, GL_DYNAMIC_DRAW);
+				chunk->index_count = mesh->index_count;
+			}
+
+			mesh_destroy(task->result);
+			free(mesh);
+			free(arg->chunk_data);
+			for(i32 i = 0; i < 6; i++) free(arg->neighbors_data[i]);
+		}
+		break;
 	}
 
 	SDL_DestroyMutex(task->mutex);
@@ -222,7 +246,6 @@ static void world_check_tasks(World *world)
 
 void world_update(World *world, f32 dt)
 {
-	world->meshed_count = 0;
 	player_update(&world->player, dt);
 
 	world_center_around_pos(world, &world->player.camera.transform.position);

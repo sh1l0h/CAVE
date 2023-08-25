@@ -16,7 +16,7 @@
 
 #include "./util.h"
 #include <GL/glew.h>
-#include "./mesh_buffer.h"
+#include "./mesh.h"
 
 // vertex input u32
 //[29:31] - extra
@@ -26,6 +26,12 @@
 //[10:14] - z
 //[5:9] - y
 //[0:4] - x
+
+struct ChunkMeshArg {
+	Vec3i chunk_pos;
+	u16 *chunk_data;
+	bool *neighbors_data[6];
+};
 
 typedef struct Chunk {
 	// position in chunks
@@ -42,12 +48,9 @@ typedef struct Chunk {
 	// if true, the chuck needs to be remeshed
 	bool is_dirty;
 
-	MeshBuffer vert_buffer;
-	MeshBuffer index_buffer;
-	u32 vert_count;
-	u32 index_count;
-
 	bool has_buffers;
+
+	u32 index_count;
 	GLuint VAO, VBO, IBO;
 } Chunk;
 
@@ -61,7 +64,7 @@ void chunk_destroy(const Chunk *chunk);
 
 void chunk_update(Chunk *chunk);
 
-void chunk_mesh(Chunk *chunk);
+Mesh *chunk_mesh(struct ChunkMeshArg *arg);
 
 void chunk_render(Chunk *chunk);
 
@@ -79,6 +82,6 @@ i32 chunk_cmp(void *element, void *arg);
 							  pos.y == 0 || pos.y == CHUNK_SIZE - 1 || \
 							  pos.z == 0 || pos.z == CHUNK_SIZE - 1)
 
-#define CHUNK_OFFSET_2_INDEX(pos) (pos.x + pos.y*CHUNK_SIZE + pos.z*CHUNK_SIZE*CHUNK_SIZE)
+#define CHUNK_OFFSET_2_INDEX(pos) ( pos.y + pos.x*CHUNK_SIZE + pos.z*CHUNK_SIZE*CHUNK_SIZE)
 
 #endif
