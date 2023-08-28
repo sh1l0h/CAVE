@@ -2,6 +2,19 @@
 #include "include/block.h"
 #include "include/state.h"
 
+static void world_make_neighbors_dirty(World *world, const Vec3i *chunk_pos)
+{
+	for(i32 i = 0; i < 6; i++){
+		Vec3i neighbor_pos;
+		get_facing_block_offset(chunk_pos, i, &neighbor_pos);
+
+
+		Chunk *neighbor = world_get_chunk(world, &neighbor_pos);
+		if(neighbor == NULL) continue;
+		neighbor->is_dirty = true;
+	}
+}
+
 static void world_fill_null_chunks(World *world)
 {
 	for(i32 z = 0; z < world->chunks_size.z; z++){
@@ -49,6 +62,7 @@ static void world_fill_null_chunks(World *world)
 	}
 
 }
+
 
 static f32 height_spline(f32 x)
 {
@@ -98,7 +112,7 @@ static void world_center_around_pos(World *world, Vec3 *pos)
 
 static f32 dencity_bias(f32 height, f32 base)
 {
-	return 3.3f*(base - height)/height;
+	return 2.0f*(base - height)/height;
 }
 
 Chunk **world_generate_chunk_column(Vec2i *column_position)
@@ -118,7 +132,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 			Vec2i block_pos;
 			zinc_vec2i_add(&column_pos_in_blocks, &(Vec2i){{x, z}}, &block_pos);
 
-			f32 mountain_noise = noise_2d_octave_perlin(&state.noise, &(Vec2){{block_pos.x / 400.0f, block_pos.y / 400.0f}}, 3, 0.5f);	
+			f32 mountain_noise = noise_2d_octave_perlin(&state.noise, &(Vec2){{block_pos.x / 900.0f, block_pos.y / 900.0f}}, 3, 0.5f);	
 
 			bool is_air_above = true;
 			for(i32 y = 239; y >= 0; y--){
@@ -127,7 +141,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 
 				u16 block_type = BLOCK_AIR;
 
-				f32 noise_3d = noise_3d_octave_perlin(&state.noise, &(Vec3){{block_pos.x/100.0f, y/130.0f, block_pos.y/100.0f}}, 4, 0.2);
+				f32 noise_3d = noise_3d_octave_perlin(&state.noise, &(Vec3){{block_pos.x/100.0f, y/300.0f, block_pos.y/100.0f}}, 3, 0.3);
 				if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
 					if(is_air_above)
 						block_type = BLOCK_GRASS;
@@ -182,6 +196,7 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 				hm_remove(&world->chunks_in_creation, &curr->position);
 				chunk_init_buffers(curr);
 				if(!world_set_chunk(world, curr)) hm_add(&world->inactive_chunks, curr);
+				else world_make_neighbors_dirty(world, &curr->position);
 			}
 
 			free(column);
@@ -282,6 +297,7 @@ bool world_set_chunk(World *world, Chunk *chunk)
 	zinc_vec3i_sub(&chunk->position, &world->origin, &offset);
 
 	world->chunks[world_offset_to_index(world, &offset)] = chunk;
+
 
 	return true;
 }

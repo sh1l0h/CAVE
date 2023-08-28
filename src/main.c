@@ -34,11 +34,11 @@ void init()
 	ctp_create(&state.chunk_thread_pool);
 
 	//432134
-	noise_create(&state.noise, 432134);
+	noise_create(&state.noise, time(NULL));
 
 	bm_create(&state.block_marker, &(Vec4){{0.6f, 0.6f, 0.6f, 1.0f}});
 
-	world_create(&state.world, 16, 15, 16);
+	world_create(&state.world, 30, 15, 30);
 
 	state.world.player.camera.transform.position = (Vec3) {{400.0f, 100.0f, 400.0f}};
 }
@@ -62,22 +62,29 @@ int main()
 
 	SDL_Window *window = SDL_CreateWindow("CAVE", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL);
 
-	if (!window) {
+	if(!window){
 		SDL_Log("SDL could not create window. SDL_Error: %s", SDL_GetError());
 		return 1;
 	}
 
+	if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0){
+		SDL_Log("SDL could not set main thread prioriy to high. SDL_Error: %s", SDL_GetError());
+		return 1;
+	}
+
 	SDL_GLContext context = SDL_GL_CreateContext(window);
-	if (!context) {
+	if(!context){
 		SDL_Log("SDL could not create OpenGL context. SDL_Error: %s", SDL_GetError());
 		return 1;
 	}
 
 	GLenum err = glewInit();
-	if (GLEW_OK != err) {
+	if(GLEW_OK != err){
 		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 		return 0;
 	}
+
+
 
 	SDL_GL_SetSwapInterval(0);
 
