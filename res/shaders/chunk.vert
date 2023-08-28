@@ -27,5 +27,7 @@ void main()
     vert_uv = vec2(float(u)*uv_offset.x, float(v)*uv_offset.y);
 
     inp = inp >> 5u;
-    vert_brightness = float(inp & 0xFu) / 15.0f;
+	uint brightness = inp & 0xFu;
+	inp = inp >> 4u;
+    vert_brightness = (float(brightness)*float(inp & 0x7u)) / (15.0f*7.0f);
 }

@@ -35,6 +35,7 @@ static void world_fill_null_chunks(World *world)
 
 				if(chunk){
 					*curr = chunk;
+					world_make_neighbors_dirty(world, &chunk->position);
 					continue;
 				}
 				//TODO: check saves

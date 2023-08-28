@@ -48,5 +48,5 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(${PROJECT_NAME} PRIVATE -O3)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Ofast)
 endif()

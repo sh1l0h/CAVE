@@ -38,7 +38,7 @@ void init()
 
 	bm_create(&state.block_marker, &(Vec4){{0.6f, 0.6f, 0.6f, 1.0f}});
 
-	world_create(&state.world, 30, 15, 30);
+	world_create(&state.world, 32, 15, 32);
 
 	state.world.player.camera.transform.position = (Vec3) {{400.0f, 100.0f, 400.0f}};
 }

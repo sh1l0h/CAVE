@@ -19,7 +19,7 @@
 #include "./mesh.h"
 
 // vertex input u32
-//[29:31] - extra
+//[2:31] - ao
 //[25:28] - Light intensity
 //[20:24] - v
 //[15:19] - u
@@ -30,7 +30,7 @@
 struct ChunkMeshArg {
 	Vec3i chunk_pos;
 	u16 *chunk_data;
-	bool *neighbors_data[6];
+	bool **neighbors_data;
 };
 
 typedef struct Chunk {
