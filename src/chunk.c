@@ -339,6 +339,8 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 			}
 		}
 	}
+
+	log_info("Chunk <%d, %d, %d> meshed", arg->chunk_pos.x, arg->chunk_pos.y, arg->chunk_pos.z);
 	return result;
 }
 
@@ -391,28 +393,67 @@ static struct ChunkMeshArg *chunk_create_mesh_arg(Chunk *chunk)
 				if(one_count == 1){
 					neighbors_data[y + x*3 + z*9] = malloc(sizeof(bool)*CHUNK_SIZE);
 
-					Vec3i block_offset;
-					for(i32 i = 0; i < CHUNK_SIZE; i++){
-						if(x == 1) block_offset = (Vec3i) {{i, block_offset_y, block_offset_z}};
-						else if(y == 1) block_offset = (Vec3i) {{block_offset_x, i, block_offset_z}};
-						else block_offset = (Vec3i) {{block_offset_x, block_offset_y, i}};
+					if(x == 1) {
+						Vec3i block_offset = {{0, block_offset_y, block_offset_z}};
+						for(i32 i = 0; i < CHUNK_SIZE; i++){
+							block_offset.x = i;
+							u16 block_id = curr_chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)] & BLOCK_ID_MASK;
+							neighbors_data[y + x*3 + z*9][i] = blocks[block_id].is_transparent;
+						}
+						continue;
+					}
 
+					if(y == 1) {
+						Vec3i block_offset = {{block_offset_x, 0, block_offset_z}};
+						for(i32 i = 0; i < CHUNK_SIZE; i++){
+							block_offset.y = i;
+							u16 block_id = curr_chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)] & BLOCK_ID_MASK;
+							neighbors_data[y + x*3 + z*9][i] = blocks[block_id].is_transparent;
+						}
+						continue;
+					}
+
+					Vec3i block_offset = {{block_offset_x, block_offset_y, 0}};
+					for(i32 i = 0; i < CHUNK_SIZE; i++){
+						block_offset.z = i;
 						u16 block_id = curr_chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)] & BLOCK_ID_MASK;
 						neighbors_data[y + x*3 + z*9][i] = blocks[block_id].is_transparent;
 					}
-
 					continue;
 				}
 
 				neighbors_data[y + x*3 + z*9] = malloc(sizeof(bool)*CHUNK_SIZE*CHUNK_SIZE);
 
-				Vec3i block_offset;
+				if(x != 1) {
+					Vec3i block_offset = {{block_offset_x, 0, 0}};
+					for(i32 i = 0; i < CHUNK_SIZE; i++){
+						for(i32 j = 0; j < CHUNK_SIZE; j++){
+							block_offset.y = j;
+							block_offset.z = i;
+							u16 block_id = curr_chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)] & BLOCK_ID_MASK;
+							neighbors_data[y + x*3 + z*9][j + i*CHUNK_SIZE] = blocks[block_id].is_transparent;
+						}
+					}
+					continue;
+				}
+				if(y != 1) {
+					Vec3i block_offset = {{0, block_offset_y, 0}};
+					for(i32 i = 0; i < CHUNK_SIZE; i++){
+						for(i32 j = 0; j < CHUNK_SIZE; j++){
+							block_offset.x = j;
+							block_offset.z = i;
+							u16 block_id = curr_chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)] & BLOCK_ID_MASK;
+							neighbors_data[y + x*3 + z*9][j + i*CHUNK_SIZE] = blocks[block_id].is_transparent;
+						}
+					}
+					continue;
+				}
+
+				Vec3i block_offset = {{0, 0, block_offset_z}};
 				for(i32 i = 0; i < CHUNK_SIZE; i++){
 					for(i32 j = 0; j < CHUNK_SIZE; j++){
-						if(x != 1) block_offset = (Vec3i) {{block_offset_x, j, i}};
-						else if(y != 1) block_offset = (Vec3i) {{j, block_offset_y, i}};
-						else block_offset = (Vec3i) {{i, j, block_offset_z}};
-
+						block_offset.x = i;
+						block_offset.y = j;
 						u16 block_id = curr_chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)] & BLOCK_ID_MASK;
 						neighbors_data[y + x*3 + z*9][j + i*CHUNK_SIZE] = blocks[block_id].is_transparent;
 					}

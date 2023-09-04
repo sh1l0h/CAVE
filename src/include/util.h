@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "../../lib/ZINC/include/zinc.h"
+#include "./log.h"
 
 enum Direction {
     DIR_NORTH,

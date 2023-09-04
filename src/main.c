@@ -7,6 +7,7 @@
 #include "include/block.h"
 #include "include/noise.h"
 #include "include/block_marker.h"
+#include "include/log.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
@@ -34,20 +35,24 @@ void init()
 	ctp_create(&state.chunk_thread_pool);
 
 	//432134
-	noise_create(&state.noise, time(NULL));
+	i32 seed = time(NULL);
+	log_debug("World seed: %d", seed);
+	noise_create(&state.noise, seed);
 
 	bm_create(&state.block_marker, &(Vec4){{0.6f, 0.6f, 0.6f, 1.0f}});
 
-	world_create(&state.world, 32, 15, 32);
+	world_create(&state.world, 16, 15, 16);
 
 	state.world.player.camera.transform.position = (Vec3) {{400.0f, 100.0f, 400.0f}};
 }
 
 int main()
 {
+	log_create();
 
+	
 	if(SDL_Init(SDL_INIT_VIDEO) < 0){
-		SDL_Log("SDL could not initialize. SDL_Error: %s", SDL_GetError());
+		log_fatal("SDL could not initialize. Error: %s", SDL_GetError());
 		return 1;
 	}
 
@@ -63,30 +68,32 @@ int main()
 	SDL_Window *window = SDL_CreateWindow("CAVE", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL);
 
 	if(!window){
-		SDL_Log("SDL could not create window. SDL_Error: %s", SDL_GetError());
+		log_fatal("SDL could not create window. Error: %s", SDL_GetError());
 		return 1;
 	}
+	log_info("SDL window created");
 
-	if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0){
-		SDL_Log("SDL could not set main thread prioriy to high. SDL_Error: %s", SDL_GetError());
-		return 1;
-	}
 
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 	if(!context){
-		SDL_Log("SDL could not create OpenGL context. SDL_Error: %s", SDL_GetError());
+		log_fatal("SDL could not create OpenGL context. Error: %s", SDL_GetError());
+		return 1;
+	}
+	log_info("OpenGL context created");
+
+	GLenum err = glewInit();
+	if(err != GLEW_OK){
+		log_fatal("GLEW could not initialize. Error: %s", glewGetErrorString(err));
+		return 0;
+	}
+	log_info("GLEW initialized");
+
+	if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0){
+		log_fatal("SDL could not set main thread prioriy to high. Error: %s", SDL_GetError());
 		return 1;
 	}
 
-	GLenum err = glewInit();
-	if(GLEW_OK != err){
-		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-		return 0;
-	}
-
-
-
-	SDL_GL_SetSwapInterval(0);
+	//SDL_GL_SetSwapInterval(0);
 
 	glEnable(GL_DEPTH_TEST);
 	glViewport(0, 0, 1280, 720);
@@ -174,11 +181,11 @@ int main()
 		world_render(&state.world);
 		frame_count++;
 
-		if(second_count >= 1000){
-			printf("FPS: %f\n", frame_count*1000.0f/second_count);
-			second_count = 0;
-			frame_count = 0;
-		}
+		//if(second_count >= 1000){
+		//log_debug("FPS: %f", frame_count*1000.0f/second_count);
+		//second_count = 0;
+		//frame_count = 0;
+		//}
 		
 		if(state.world.player.selected_block_chunk){
 			Vec3i block_marker_pos;

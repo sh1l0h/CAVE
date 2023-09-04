@@ -92,6 +92,8 @@ static void world_center_around_pos(World *world, Vec3 *pos)
 	   new_origin.z == world->origin.z) 
 		return;
 
+	log_info("Centering world around <%d, %d, %d>", center.x, center.y, center.z);
+
 	zinc_vec3i_copy(&new_origin, &world->origin);
 
 	Chunk **old_chunks = malloc(WORLD_VOLUME(world)*sizeof(Chunk *));
@@ -109,6 +111,7 @@ static void world_center_around_pos(World *world, Vec3 *pos)
 
 	free(old_chunks);
 	world_fill_null_chunks(world);
+
 }
 
 static f32 dencity_bias(f32 height, f32 base)
@@ -142,7 +145,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 
 				u16 block_type = BLOCK_AIR;
 
-				f32 noise_3d = noise_3d_octave_perlin(&state.noise, &(Vec3){{block_pos.x/100.0f, y/300.0f, block_pos.y/100.0f}}, 3, 0.3);
+				f32 noise_3d = noise_3d_octave_perlin(&state.noise, &(Vec3){{block_pos.x/100.0f, y/130.0f, block_pos.y/100.0f}}, 3, 0.3);
 				if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
 					if(is_air_above)
 						block_type = BLOCK_GRASS;
@@ -161,6 +164,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 		}
 	}
 
+	log_info("Column <%d, %d> generated", column_position->x, column_position->y);
 	return column;
 }
 
@@ -239,11 +243,12 @@ static void world_check_tasks(World *world)
 {
 	struct LinkedListNode *curr = world->tasks.head;
     struct LinkedListNode *prev = NULL;
+	struct LinkedListNode *next = NULL;
 
     while(curr != NULL){
         if(world_check_task(world, curr->data)){
-			struct LinkedListNode *next = curr->next;
-            
+			next = curr->next;
+
             if(prev == NULL) world->tasks.head = next;
             else prev->next = next;
 
@@ -253,10 +258,9 @@ static void world_check_tasks(World *world)
             world->tasks.size--;
 
             curr = next;
+			continue;
         }
-		else{
-            prev = curr; curr = curr->next;
-        }
+		prev = curr; curr = curr->next;
 	}
 }
 

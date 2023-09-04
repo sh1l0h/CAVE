@@ -36,6 +36,7 @@ static GLuint shader_compile(const char *shader_path, GLenum type)
 		exit(1);
 	}
 
+	log_info("Shader at \"%s\" compiled", shader_path);
 	return shader;
 }
 	
@@ -69,6 +70,8 @@ void shader_create(Shader *shader, const char *vert_shader_path, const char *fra
 		free(text);
 		exit(1);
 	}
+
+	log_info("Vertex shader at \"%s\" and fragment shader \"%s\" linked", vert_shader_path, frag_shader_path);
 
 	shader->program = program;
 	shader->vert_shader = vert_shader;
