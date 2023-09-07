@@ -19,20 +19,24 @@ State state;
 void init()
 {
 	shader_create(&state.shaders[SHADER_CHUNK], "./res/shaders/chunk.vert", "./res/shaders/chunk.frag");
-
 	state.model_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "model");
 	state.view_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "view");
 	state.projection_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "projection");
 	state.uv_offset_uniform = glGetUniformLocation(state.shaders[SHADER_CHUNK].program, "uv_offset");
-
 	shader_create(&state.shaders[SHADER_BLOCK_MARKER], "./res/shaders/block_marker.vert", "./res/shaders/block_marker.frag");
 
-	atlas_create(&state.block_atlas, "./res/imgs/block_textures.png", 16, 16);
-
 	block_init();
-
-	state.keyboard = SDL_GetKeyboardState(NULL);
+	atlas_create(&state.block_atlas, "./res/imgs/block_textures.png", 16, 16);
 	ctp_create(&state.chunk_thread_pool);
+
+	em_create(&state.entity_manager);
+	hm_create(&state.transforms, 16, u32_hash, u32_cmp, 0.8);
+	hm_create(&state.cameras, 16, u32_hash, u32_cmp, 0.8);
+
+	player_add(em_add_entity(&state.entity_manager));
+	transform_add(state.player.id, &(Vec3){{400.0f, 200.0f, 400.0f}}, &(Vec3){{0.0f,0.0f, 0.0f}});
+	camera_add(state.player.id, ZINC_PI_OVER_2);
+	state.main_camera = state.player.id;
 
 	//432134
 	i32 seed = time(NULL);
@@ -41,9 +45,7 @@ void init()
 
 	bm_create(&state.block_marker, &(Vec4){{0.6f, 0.6f, 0.6f, 1.0f}});
 
-	world_create(&state.world, 16, 15, 16);
-
-	state.world.player.camera.transform.position = (Vec3) {{400.0f, 100.0f, 400.0f}};
+	world_create(&state.world, 16, 20, 16);
 }
 
 int main()
@@ -100,6 +102,8 @@ int main()
 	glClearColor(0.5f, 0.8f, 0.98f, 1.0f);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
+	state.keyboard = SDL_GetKeyboardState(NULL);
+
 	init();
 
 	u32 last_time = SDL_GetTicks();
@@ -120,15 +124,6 @@ int main()
 		while(SDL_PollEvent(&event)){
 			switch(event.type){
 
-			case SDL_MOUSEMOTION:
-				{
-					SDL_MouseMotionEvent motion = event.motion;
-					zinc_vec3_add(&state.world.player.camera.transform.rotation, &(Vec3){{motion.yrel/500.0f, motion.xrel/500.0f, 0.0f}}, &state.world.player.camera.transform.rotation);
-					if(state.world.player.camera.transform.rotation.x > ZINC_PI_OVER_2 - 0.01f) state.world.player.camera.transform.rotation.x = ZINC_PI_OVER_2 - 0.01f;
-					else if(state.world.player.camera.transform.rotation.x < -ZINC_PI_OVER_2 + 0.01f) state.world.player.camera.transform.rotation.x = -ZINC_PI_OVER_2 + 0.01f;
-				}
-				break;
-
 			case SDL_WINDOWEVENT:
 				switch (event.window.event) {
 				case SDL_WINDOWEVENT_RESIZED:
@@ -144,35 +139,27 @@ int main()
 				}
 				break;
 
-			case SDL_MOUSEBUTTONDOWN:
-				{
-					SDL_MouseButtonEvent button = event.button;
-					if(button.button == SDL_BUTTON_LEFT){
-						if(state.world.player.selected_block_chunk){
-							chunk_set_block(state.world.player.selected_block_chunk, &state.world.player.selected_block_offset, BLOCK_AIR);
-						}
-					}
-					else if(button.button == SDL_BUTTON_RIGHT){
-						player_place_block(&state.world.player);
-					}
-				}
-				break;
-			case SDL_MOUSEBUTTONUP:
-				{
-					SDL_MouseButtonEvent button = event.button;
-					if(button.button == SDL_BUTTON_LEFT) state.mouse_buttons[0] = false;
-					else if(button.button == SDL_BUTTON_RIGHT) state.mouse_buttons[1] = false;
-				}
-				break;
-
 			case SDL_QUIT:
 				quit = true;
 				break;
 			}
 		}
 
+		u32 mouse_state = SDL_GetRelativeMouseState(&state.rel_mouse.x, &state.rel_mouse.y);
+		state.mouse_buttons[0] = mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT);
+		state.mouse_buttons[1] = mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT);
+
 		while(time_to_process >= ms_per_update){
-			world_update(&state.world, 1.0f/ UPDATES_PER_SECOND);
+			f32 dt = 1.0f/ UPDATES_PER_SECOND;
+
+			player_update_mouse();
+			transform_update_all();
+			player_update_movement(dt);
+
+			Camera *camera = camera_get(state.main_camera);
+			camera_update(camera);
+
+			world_update(&state.world);
 
 			time_to_process -= ms_per_update;
 		}
@@ -181,18 +168,18 @@ int main()
 		world_render(&state.world);
 		frame_count++;
 
-		//if(second_count >= 1000){
-		//log_debug("FPS: %f", frame_count*1000.0f/second_count);
-		//second_count = 0;
-		//frame_count = 0;
-		//}
+		if(second_count >= 1000){
+			log_debug("FPS: %f", frame_count*1000.0f/second_count);
+			second_count = 0;
+			frame_count = 0;
+		}
 		
-		if(state.world.player.selected_block_chunk){
+		if(state.player.selected_block_chunk){
 			Vec3i block_marker_pos;
-			Chunk *selected_chunk = state.world.player.selected_block_chunk;
+			Chunk *selected_chunk = state.player.selected_block_chunk;
 			zinc_vec3i_scale(&selected_chunk->position, CHUNK_SIZE, &block_marker_pos);
-			zinc_vec3i_add(&block_marker_pos, &state.world.player.selected_block_offset, &block_marker_pos);
-			bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, state.world.player.selected_block_dir);
+			zinc_vec3i_add(&block_marker_pos, &state.player.selected_block_offset, &block_marker_pos);
+			bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, state.player.selected_block_dir);
 		}
 
 		SDL_GL_SwapWindow(window);

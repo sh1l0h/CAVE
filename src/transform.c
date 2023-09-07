@@ -1,14 +1,40 @@
 #include "include/transform.h"
+#include "include/state.h"
 
-void transform_init(Transform *transform, const Vec3 *pos, const Vec3 *rotation)
+void transform_add(u32 id, const Vec3 *pos, const Vec3 *rotation)
 {
+	if(id >= state.entity_manager.max_id || !state.entity_manager.entities[id]) {
+		log_error("Attempt to add a transform to a nonexistent entity<%d>", id);
+		return;
+	}
+
+	Transform *transform = calloc(1, sizeof(Transform));
+
+	transform->id = id;
 	zinc_vec3_copy(pos, &transform->position);
 	zinc_vec3_copy(rotation, &transform->rotation);
 
-	transform_update(transform);
+	hm_add(&state.transforms, &transform->id, transform);
+
+	log_info("Transform component added to entity<%d>", id);
 }
 
-void transform_update(Transform *transform)
+Transform *transform_get(u32 id)
+{
+	if(id >= state.entity_manager.max_id) return NULL;
+
+	Transform *transform = hm_get(&state.transforms, &id);
+	if(!state.entity_manager.entities[id]){
+		if(transform)
+			hm_remove(&state.transforms, &id);
+
+		return NULL;
+	}
+	
+	return transform;
+}
+
+static void transform_update(Transform *transform)
 {
 	f32 c_x = cosf(transform->rotation.x);
 	f32 s_x = sinf(transform->rotation.x);
@@ -21,4 +47,16 @@ void transform_update(Transform *transform)
 	zinc_vec3_normalize(&transform->right);
 	zinc_vec3_cross(&transform->forward, &transform->right, &transform->up);
 	zinc_vec3_normalize(&transform->up);
+}
+
+void transform_update_all()
+{
+	HashMap *hm = &state.transforms;
+	for(u32 i = 0; i < hm->allocated_buckets; i++){
+		struct HashMapNode *curr = hm->buckets[i];
+		while(curr != NULL){
+			transform_update(curr->data);
+			curr = curr->next;
+		}
+	}
 }

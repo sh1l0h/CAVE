@@ -171,15 +171,13 @@ void chunk_init_buffers(Chunk *chunk)
 void chunk_destroy(const Chunk *chunk)
 {
 	free(chunk->data);
-	glDeleteBuffers(1, &chunk->VBO);
-	glDeleteBuffers(1, &chunk->IBO);
-	glDeleteVertexArrays(1, &chunk->VAO);
-}
 
-//void chunk_update(Chunk *chunk)
-//{
-//chunk->position.x = chunk->position.x;
-//}
+	if(chunk->has_buffers){
+		glDeleteBuffers(1, &chunk->VBO);
+		glDeleteBuffers(1, &chunk->IBO);
+		glDeleteVertexArrays(1, &chunk->VAO);
+	}
+}
 
 static void chunk_append_face(Mesh *mesh, Vec3i *pos, i32 direction, Vec2i *uv, u8 *neighboring_blocks)
 {
@@ -363,6 +361,7 @@ static struct ChunkMeshArg *chunk_create_mesh_arg(Chunk *chunk)
 				Vec3i curr_chunk_pos = {{x-1, y-1, z-1}};
 				zinc_vec3i_add(&chunk->position, &curr_chunk_pos, &curr_chunk_pos);
 				Chunk *curr_chunk = world_get_chunk(world, &curr_chunk_pos);
+
 				if(curr_chunk == NULL){
 					neighbors_data[y + x*3 + z*9] = NULL;
 					continue;
@@ -542,16 +541,4 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 			if(neighbors[i]) neighbors[i]->is_dirty = true;
 		}
 	}
-}
-
-u32 chunk_hash(void *arg)
-{
-	Chunk *chunk = arg;
-	return vec3i_hash(&chunk->position);
-}
-
-i32 chunk_cmp(void *element, void *arg)
-{
-	Chunk *chunk = element;
-	return vec3i_cmp(&chunk->position, arg);
 }

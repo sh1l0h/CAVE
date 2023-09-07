@@ -40,6 +40,18 @@ static void world_fill_null_chunks(World *world)
 				}
 				//TODO: check saves
 
+				if(chunk_pos.y >= CHUNK_COLUMN_HEIGHT){
+					Chunk *chunk = malloc(sizeof(Chunk));
+					chunk_create(chunk, &chunk_pos);
+					chunk_init_buffers(chunk);
+					*curr = chunk;
+					world_make_neighbors_dirty(world, &chunk->position);
+					continue;
+				}
+
+				if(chunk_pos.y < 0) continue;
+														
+
 				Vec2i *column_pos = malloc(sizeof(Vec2i));
 				column_pos->x = chunk_pos.x;
 				column_pos->y = chunk_pos.z;
@@ -55,7 +67,7 @@ static void world_fill_null_chunks(World *world)
 					curr->y = i;
 					curr->z = column_pos->y;
 
-					hm_add(&world->chunks_in_creation, curr);
+					hm_add(&world->chunks_in_creation, curr, curr);
 				}
 
 			}
@@ -84,9 +96,6 @@ static void world_center_around_pos(World *world, Vec3 *pos)
 	Vec3i new_origin;
 	zinc_vec3i_sub(&center, &half_chunks_size, &new_origin);
 
-	//TODO: change vertical behavior
-	new_origin.y = 0;
-
 	if(new_origin.x == world->origin.x &&
 	   new_origin.y == world->origin.y &&
 	   new_origin.z == world->origin.z) 
@@ -106,7 +115,7 @@ static void world_center_around_pos(World *world, Vec3 *pos)
 		if(!curr) continue;
 
 		if(!world_set_chunk(world, curr))
-			hm_add(&world->inactive_chunks, curr);
+			hm_add(&world->inactive_chunks, &curr->position, curr);
 	}
 
 	free(old_chunks);
@@ -116,7 +125,7 @@ static void world_center_around_pos(World *world, Vec3 *pos)
 
 static f32 dencity_bias(f32 height, f32 base)
 {
-	return 2.0f*(base - height)/height;
+	return 1.0f*(base - height)/height;
 }
 
 Chunk **world_generate_chunk_column(Vec2i *column_position)
@@ -145,7 +154,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 
 				u16 block_type = BLOCK_AIR;
 
-				f32 noise_3d = noise_3d_octave_perlin(&state.noise, &(Vec3){{block_pos.x/100.0f, y/130.0f, block_pos.y/100.0f}}, 3, 0.3);
+				f32 noise_3d = noise_3d_octave_perlin(&state.noise, &(Vec3){{block_pos.x/100.0f, y/400.0f, block_pos.y/100.0f}}, 3, 0.3);
 				if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
 					if(is_air_above)
 						block_type = BLOCK_GRASS;
@@ -170,8 +179,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 
 void world_create(World *world, i32 size_x, i32 size_y, i32 size_z)
 {
-	player_init(&world->player);
-	hm_create(&world->inactive_chunks, 1024, chunk_hash, chunk_cmp, 0.8f);
+	hm_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
 	hm_create(&world->chunks_in_creation, 1024, vec3i_hash, vec3i_cmp, 0.8f);
 	ll_create(&world->tasks);
 
@@ -200,7 +208,7 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 				Chunk *curr = column[y];
 				hm_remove(&world->chunks_in_creation, &curr->position);
 				chunk_init_buffers(curr);
-				if(!world_set_chunk(world, curr)) hm_add(&world->inactive_chunks, curr);
+				if(!world_set_chunk(world, curr)) hm_add(&world->inactive_chunks, &curr->position, curr);
 				else world_make_neighbors_dirty(world, &curr->position);
 			}
 
@@ -241,34 +249,37 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 
 static void world_check_tasks(World *world)
 {
-	struct LinkedListNode *curr = world->tasks.head;
-    struct LinkedListNode *prev = NULL;
-	struct LinkedListNode *next = NULL;
+	if(world->tasks.size == 0) return;
 
-    while(curr != NULL){
-        if(world_check_task(world, curr->data)){
-			next = curr->next;
+	while(world->tasks.size > 0 && world_check_task(world, world->tasks.head->data)) 
+		ll_pop(&world->tasks);
 
-            if(prev == NULL) world->tasks.head = next;
-            else prev->next = next;
+	if(world->tasks.size == 0) return;
+		
+	struct LinkedListNode *curr = world->tasks.head->next;
+	struct LinkedListNode *prev = world->tasks.head;
 
-            if(next == NULL) world->tasks.tail = prev;
-
-            free(curr);
-            world->tasks.size--;
-
-            curr = next;
+	while(curr != NULL){
+		if(world_check_task(world, curr->data)){
+			world->tasks.size--;
+			prev->next = curr->next;
+			free(curr);
+			curr = prev->next;
 			continue;
-        }
-		prev = curr; curr = curr->next;
+		}
+
+		prev = curr;
+		curr = curr->next;
 	}
+
+	world->tasks.tail = prev;
 }
 
-void world_update(World *world, f32 dt)
+void world_update(World *world)
 {
-	player_update(&world->player, dt);
+	Transform *transform = transform_get(state.player.id);
 
-	world_center_around_pos(world, &world->player.camera.transform.position);
+	world_center_around_pos(world, &transform->position);
 
 	world_check_tasks(world);
 }
@@ -277,8 +288,10 @@ void world_render(World *world)
 {
 	glUseProgram(state.shaders[SHADER_CHUNK].program);
 
-	glUniformMatrix4fv(state.view_uniform, 1, GL_TRUE, (GLfloat *)world->player.camera.view);
-	glUniformMatrix4fv(state.projection_uniform, 1, GL_TRUE, (GLfloat *)world->player.camera.projection);
+	Camera *camera = camera_get(state.main_camera);
+
+	glUniformMatrix4fv(state.view_uniform, 1, GL_TRUE, (GLfloat *)camera->view);
+	glUniformMatrix4fv(state.projection_uniform, 1, GL_TRUE, (GLfloat *)camera->projection);
 	glUniform2fv(state.uv_offset_uniform, 1, (GLfloat *)&state.block_atlas.sprite_offset);
 
 	texture_bind(&state.block_atlas.texture);

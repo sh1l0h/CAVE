@@ -12,8 +12,6 @@
 #define CHUNK_COLUMN_HEIGHT 15
 
 typedef struct World {
-	Player player;
-
 	// near-bottom-left coordinate of active chunks
 	Vec3i origin;
 
@@ -33,7 +31,7 @@ typedef struct World {
 
 void world_create(World *world, i32 size_x, i32 size_y, i32 size_z);
 
-void world_update(World *world, f32 dt);
+void world_update(World *world);
 
 void world_render(World *world);
 

@@ -31,6 +31,7 @@ add_executable(${PROJECT_NAME}
     src/linked_list.c
     src/mesh.c
     src/log.c
+    src/entity_manager.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -47,9 +48,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${PROJECT_NAME} PRIVATE 
         -g 
-        -pg
+        -DCAVE_LOG
         )
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")

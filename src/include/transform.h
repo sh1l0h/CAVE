@@ -4,12 +4,20 @@
 #include "./util.h"
 
 typedef struct Transform {
-	Vec3 position, rotation;
-	Vec3 forward, up, right;
+	u32 id;
+
+	Vec3 position;
+	Vec3 rotation;
+
+	Vec3 forward;
+	Vec3 up;
+	Vec3 right;
 } Transform;
 
-void transform_init(Transform *transform, const Vec3 *pos, const Vec3 *rotation);
+void transform_add(u32 id, const Vec3 *pos, const Vec3 *rotation);
 
-void transform_update(Transform *transform);
+Transform *transform_get(u32 id);
+
+void transform_update_all();
 
 #endif

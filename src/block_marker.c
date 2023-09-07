@@ -49,8 +49,10 @@ void bm_render(const BlockMarker *bm, Vec3 *position, i32 dir)
 {
 	glUseProgram(state.shaders[SHADER_BLOCK_MARKER].program);
 
-	glUniformMatrix4fv(bm->view_uniform, 1, GL_TRUE, (GLfloat *)state.world.player.camera.view);
-	glUniformMatrix4fv(bm->projection_uniform, 1, GL_TRUE, (GLfloat *)state.world.player.camera.projection);
+	Camera *camera = hm_get(&state.cameras, &state.main_camera);
+
+	glUniformMatrix4fv(bm->view_uniform, 1, GL_TRUE, (GLfloat *)camera->view);
+	glUniformMatrix4fv(bm->projection_uniform, 1, GL_TRUE, (GLfloat *)camera->projection);
 
 	Mat4 model;
 	zinc_translate(model, position);

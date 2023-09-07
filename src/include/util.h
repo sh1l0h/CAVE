@@ -29,9 +29,5 @@ void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest);
 				pos.y < 0 ? (pos.y - CHUNK_SIZE + 1)/ CHUNK_SIZE : pos.y / CHUNK_SIZE, \
 				pos.z < 0 ? (pos.z - CHUNK_SIZE + 1)/ CHUNK_SIZE : pos.z / CHUNK_SIZE}}
 
-u32 vec3i_hash(void *element);
-
-i32 vec3i_cmp(void *element, void *arg);
-
 
 #endif

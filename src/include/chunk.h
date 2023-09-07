@@ -70,10 +70,6 @@ void chunk_render(Chunk *chunk);
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block);
 
-u32 chunk_hash(void *arg);
-
-i32 chunk_cmp(void *element, void *arg);
-
 #define CHUNK_IN_BOUNDS(pos) (pos.x >= 0 && pos.x < CHUNK_SIZE &&	\
 							  pos.y >= 0 && pos.y < CHUNK_SIZE &&	\
 							  pos.z >= 0 && pos.z < CHUNK_SIZE)

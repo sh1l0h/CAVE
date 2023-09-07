@@ -14,7 +14,10 @@ typedef struct LinkedList {
 } LinkedList;
 
 void ll_create(LinkedList *list);
+void ll_destroy(LinkedList *list);
 
 void ll_add(LinkedList *list, void *el);
 void ll_push(LinkedList *list, void *el);
+
+void *ll_pop(LinkedList *list);
 #endif
