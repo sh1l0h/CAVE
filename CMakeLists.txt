@@ -13,32 +13,32 @@ find_package(GLEW REQUIRED)
 
 add_executable(${PROJECT_NAME} 
     src/main.c
-    src/io.c
-    src/world.c
-    src/chunk.c
-    src/block.c
-    src/texture.c
-    src/atlas.c
-    src/shader.c
-    src/camera.c
-    src/player.c
-    src/transform.c
-    src/mesh_buffer.c
-    src/noise.c
-    src/block_marker.c
-    src/hash_map.c
-    src/chunk_thread_pool.c
-    src/linked_list.c
-    src/mesh.c
-    src/log.c
-    src/entity_manager.c
+    src/core/io.c
+    src/world/world.c
+    src/world/chunk.c
+    src/world/block.c
+    src/graphics/texture.c
+    src/graphics/atlas.c
+    src/graphics/shader.c
+    src/ECS/camera.c
+    src/ECS/player.c
+    src/ECS/transform.c
+    src/graphics/mesh_buffer.c
+    src/core/noise.c
+    src/core/block_marker.c
+    src/data_structures/hash_map.c
+    src/core/chunk_thread_pool.c
+    src/data_structures/linked_list.c
+    src/graphics/mesh.c
+    src/core/log.c
+    src/ECS/entity_manager.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ZINC
-    SDL2
+    ${SDL2_LIBRARIES} 
     ${OPENGL_LIBRARIES}
-    GLEW
+    ${GLEW_LIBRARIES} 
     m
     )
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)

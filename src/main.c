@@ -3,11 +3,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include <time.h>
-#include "include/state.h"
-#include "include/block.h"
-#include "include/noise.h"
-#include "include/block_marker.h"
-#include "include/log.h"
+
+#include "../include/core/state.h"
+#include "../include/world/block.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
