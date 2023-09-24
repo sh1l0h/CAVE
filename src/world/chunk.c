@@ -179,7 +179,7 @@ void chunk_destroy(const Chunk *chunk)
 	}
 }
 
-static void chunk_append_face(Mesh *mesh, Vec3i *pos, i32 direction, Vec2i *uv, u8 *neighboring_blocks)
+static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction, Vec2i *uv, u8 *neighboring_blocks)
 {
 	u32 origin_x = pos->x + direction_offset[direction*3];
 	u32 origin_y = pos->y + direction_offset[direction*3 + 1];
@@ -237,7 +237,7 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, i32 direction, Vec2i *uv, 
 	mesh->index_count += 6;
 }
 
-void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest)
+void get_facing_block_offset(const Vec3i *pos, Direction dir, Vec3i *dest)
 {
 	zinc_vec3i_copy(pos, dest);
 	switch(dir){

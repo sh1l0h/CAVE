@@ -10,16 +10,16 @@
 #include "../lib/ZINC/include/zinc.h"
 #include "./core/log.h"
 
-enum Direction {
-    DIR_NORTH,
+typedef enum Direction {
+    DIR_NORTH = 0,
     DIR_EAST,
     DIR_SOUTH,
     DIR_WEST,
     DIR_TOP,
     DIR_BOTTOM
-};
+} Direction;
 
-void get_facing_block_offset(const Vec3i *pos, i32 dir, Vec3i *dest);
+void get_facing_block_offset(const Vec3i *pos, Direction dir, Vec3i *dest);
 
 #define POS_2_BLOCK(pos) {{(i32)floorf(pos.x), (i32)floorf(pos.y), (i32)floorf(pos.z)}}   
 

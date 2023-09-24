@@ -1,5 +1,6 @@
 #include "../../include/core/block_marker.h"
 #include "../../include/core/state.h"
+#include "../../include/ECS/ecs.h"
 
 f32 bm_verts[] = {
 	0.005f, 0.005f, 0.005f,
@@ -49,7 +50,7 @@ void bm_render(const BlockMarker *bm, Vec3 *position, i32 dir)
 {
 	glUseProgram(state.shaders[SHADER_BLOCK_MARKER].program);
 
-	Camera *camera = hm_get(&state.cameras, &state.main_camera);
+	Camera *camera = ecs_get_component(state.player_id, CMP_Camera);
 
 	glUniformMatrix4fv(bm->view_uniform, 1, GL_TRUE, (GLfloat *)camera->view);
 	glUniformMatrix4fv(bm->projection_uniform, 1, GL_TRUE, (GLfloat *)camera->projection);

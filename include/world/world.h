@@ -42,7 +42,7 @@ Chunk *world_get_chunk(World *world, const Vec3i *chunk_pos);
 
 void world_block_to_chunk_and_offset(World *world, const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset);
 
-void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, i32 *facing_dir);
+void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, Direction *facing_dir);
 
 u32 world_offset_to_index(World *world, const Vec3i *offset);
 

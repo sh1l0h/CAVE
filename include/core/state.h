@@ -7,10 +7,7 @@
 #include "./noise.h"
 #include "./block_marker.h"
 #include "./chunk_thread_pool.h"
-#include "../ECS/transform.h"
 #include "../data_structures/hash_map.h"
-#include "../ECS/entity_manager.h"
-#include "../ECS/player.h"
 
 enum ShaderType {
 	SHADER_CHUNK,
@@ -26,16 +23,8 @@ typedef struct State {
 	Noise noise;
 	BlockMarker block_marker;
 	ChunkThreadPool chunk_thread_pool;
-	EntityManager entity_manager;
-	
-	HashMap transforms;
-	HashMap cameras;
-	u32 main_camera;
-	HashMap box_colliders;
 
-	HashMap rigid_bodies;
-
-	Player player;
+	u64 player_id;
 
 	const u8 *keyboard;
 	bool mouse_buttons[2];

@@ -6,6 +6,10 @@
 
 #include "../include/core/state.h"
 #include "../include/world/block.h"
+#include "../include/ECS/ecs.h"
+#include "../include/ECS/transform.h"
+#include "../include/ECS/camera.h"
+#include "../include/ECS/player.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
@@ -27,14 +31,19 @@ void init()
 	atlas_create(&state.block_atlas, "./res/imgs/block_textures.png", 16, 16);
 	ctp_create(&state.chunk_thread_pool);
 
-	em_create(&state.entity_manager);
-	hm_create(&state.transforms, 16, u32_hash, u32_cmp, 0.8);
-	hm_create(&state.cameras, 16, u32_hash, u32_cmp, 0.8);
+	ecs_init();
+	cmp_init();
 
-	player_add(em_add_entity(&state.entity_manager));
-	transform_add(state.player.id, &(Vec3){{400.0f, 200.0f, 400.0f}}, &(Vec3){{0.0f,0.0f, 0.0f}});
-	camera_add(state.player.id, ZINC_PI_OVER_2);
-	state.main_camera = state.player.id;
+	state.player_id = ecs_add_entity();
+	ecs_add_component(state.player_id, CMP_Transform);
+	ecs_add_component(state.player_id, CMP_Camera);
+	ecs_add_component(state.player_id, CMP_Player);
+
+	Camera *camera = ecs_get_component(state.player_id, CMP_Camera);
+	camera->fov = ZINC_PI_OVER_2;
+	camera->near = 0.01f;
+	camera->far = 1000.0f;
+	camera->aspect_ratio = 16.0f/9.0f;
 
 	//432134
 	i32 seed = time(NULL);
@@ -43,7 +52,7 @@ void init()
 
 	bm_create(&state.block_marker, &(Vec4){{0.6f, 0.6f, 0.6f, 1.0f}});
 
-	world_create(&state.world, 16, 20, 16);
+	world_create(&state.world, 32, 20, 32);
 }
 
 int main()
@@ -93,7 +102,7 @@ int main()
 		return 1;
 	}
 
-	//SDL_GL_SetSwapInterval(0);
+	SDL_GL_SetSwapInterval(0);
 
 	glEnable(GL_DEPTH_TEST);
 	glViewport(0, 0, 1280, 720);
@@ -150,12 +159,11 @@ int main()
 		while(time_to_process >= ms_per_update){
 			f32 dt = 1.0f/ UPDATES_PER_SECOND;
 
-			player_update_mouse();
+			player_update_mouse_all();
 			transform_update_all();
-			player_update_movement(dt);
+			player_update_movement_all(dt);
 
-			Camera *camera = camera_get(state.main_camera);
-			camera_update(camera);
+			camera_update_all();
 
 			world_update(&state.world);
 
@@ -168,16 +176,18 @@ int main()
 
 		if(second_count >= 1000){
 			log_debug("FPS: %f", frame_count*1000.0f/second_count);
+			printf("FPS: %f\n", frame_count*1000.0f/second_count);
 			second_count = 0;
 			frame_count = 0;
 		}
 		
-		if(state.player.selected_block_chunk){
+		Player *player = ecs_get_component(state.player_id, CMP_Player);
+		if(player->selected_block_chunk){
 			Vec3i block_marker_pos;
-			Chunk *selected_chunk = state.player.selected_block_chunk;
+			Chunk *selected_chunk = player->selected_block_chunk;
 			zinc_vec3i_scale(&selected_chunk->position, CHUNK_SIZE, &block_marker_pos);
-			zinc_vec3i_add(&block_marker_pos, &state.player.selected_block_offset, &block_marker_pos);
-			bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, state.player.selected_block_dir);
+			zinc_vec3i_add(&block_marker_pos, &player->selected_block_offset, &block_marker_pos);
+			bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, player->selected_block_dir);
 		}
 
 		SDL_GL_SwapWindow(window);

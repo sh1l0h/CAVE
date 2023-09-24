@@ -3,15 +3,8 @@
 #include "../../include/world/block.h"
 #include <SDL2/SDL.h>
 
-void player_add(u32 id)
+static void player_update_mouse(Transform *transform)
 {
-	state.player.id = id;
-}
-
-void player_update_mouse()
-{
-	Transform *transform = hm_get(&state.transforms, &state.player.id);
-
 	zinc_vec3_add(&transform->rotation, &(Vec3){{state.rel_mouse.y/500.0f, state.rel_mouse.x/500.0f, 0.0f}}, &transform->rotation);
 
 	if(transform->rotation.x > ZINC_PI_OVER_2 - 0.01f)
@@ -20,11 +13,8 @@ void player_update_mouse()
 		transform->rotation.x = -ZINC_PI_OVER_2 + 0.01f;
 }
 
-void player_update_movement(f32 dt)
+static void player_update_movement(Player *player, Transform *transform, f32 dt)
 {
-	Player *player = &state.player;
-	Transform *transform = transform_get(player->id);
-
 	player->chunk_pos = (Vec3i)POS_2_CHUNK((transform->position));
 
 	f32 speed = 10.0f * dt;
@@ -82,7 +72,7 @@ void player_update_movement(f32 dt)
 
 }
 
-void player_place_block(Player *player)
+static void player_place_block(Player *player)
 {
 	if(!player->selected_block_chunk) return;
 
@@ -101,4 +91,43 @@ void player_place_block(Player *player)
 	Chunk *chunk;
 	world_block_to_chunk_and_offset(&state.world, &block_offset, &chunk, &block_offset);
 	chunk_set_block(chunk, &block_offset, BLOCK_COBBLESTONE);
+}
+
+void player_update_mouse_all()
+{
+	HashMap *players = &archetype_component_table[CMP_Player];
+	HashMap *transforms = &archetype_component_table[CMP_Transform];
+
+	struct ArchetypeRecord *player_record;
+
+	hm_foreach_data(players, player_record){
+		struct ArchetypeRecord *transform_record = hm_get(transforms, &player_record->archetype->id);
+
+		if(transform_record == NULL) continue;
+
+		Archetype *archetype = transform_record->archetype;
+		for(u64 j = 0; j < archetype->entities.size; j++){
+			player_update_mouse(al_get(&archetype->components[transform_record->index], j));
+		}
+	}
+}
+
+void player_update_movement_all(f32 dt)
+{
+	HashMap *players = &archetype_component_table[CMP_Player];
+	HashMap *transforms = &archetype_component_table[CMP_Transform];
+
+	struct ArchetypeRecord *player_record;
+
+	hm_foreach_data(players, player_record){
+		struct ArchetypeRecord *transform_record = hm_get(transforms, &player_record->archetype->id);
+
+		if(transform_record == NULL) continue;
+
+		Archetype *archetype = transform_record->archetype;
+		for(u64 j = 0; j < archetype->entities.size; j++){
+			player_update_movement(al_get(&archetype->components[player_record->index], j),
+								   al_get(&archetype->components[transform_record->index], j), dt);
+		}
+	}
 }

@@ -2,18 +2,7 @@
 #define CAVE_CAMERA_H
 
 #include "../util.h"
-
-typedef struct Camera {
-	u32 id;
-	f32 fov, aspect_ratio, near, far;
-	Mat4 view, projection;
-} Camera;
-
-void camera_add(u32 id, f32 fov);
-
-Camera *camera_get(u32 id);
-
-void camera_update(Camera *camera);
+#include "./ecs.h"
 
 void camera_update_all();
 

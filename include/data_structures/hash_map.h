@@ -11,24 +11,52 @@ struct HashMapNode {
 
 typedef struct HashMap {
 	struct HashMapNode **buckets;
-	u32 allocated_buckets;
-	u32 size;
+	u64 allocated_buckets;
+	u64 size;
 
 	f32 load_factor;
-	u32 (*hash)(void *element);
-	i32 (*cmp)(void *key, void *arg);
+	u64 (*hash)(const void *element);
+	i32 (*cmp)(const void *key, const void *arg);
 } HashMap;
 
-void hm_create(HashMap *hm, u32 initial_size, u32 (*hash)(void *element), i32 (*cmp)(void *key, void *arg), f32 load_factor);
+#define _HM_FOREACH(map, key, data, c)							\
+	for(u64 _i##c = 0, _keep##c = 1;							\
+		_keep##c && _i##c < map->allocated_buckets;				\
+		_i##c++)												\
+		for(struct HashMapNode *_node##c = map->buckets[_i##c];	\
+			_keep##c && _node##c != NULL;						\
+			_keep##c = !_keep##c, _node##c = _node##c->next)	\
+			for(key = _node##c->key, data = _node##c->data;		\
+				_keep##c;										\
+				_keep##c = !_keep##c)
+
+#define _HM_FOREACH_DATA(map, _data, c)							\
+	for(u64 _i##c = 0, _keep##c = 1;							\
+		_keep##c && _i##c < map->allocated_buckets;				\
+		_i##c++)												\
+		for(struct HashMapNode *_node##c = map->buckets[_i##c];	\
+			_keep##c && _node##c != NULL;						\
+			(_keep##c = !_keep##c, _node##c = _node##c->next))	\
+			for(_data = _node##c->data;							\
+				_keep##c;										\
+				_keep##c =!_keep##c)
+
+#define hm_foreach(map, key, data) _HM_FOREACH((map), key, data, __COUNTER__)
+#define hm_foreach_data(map, data) _HM_FOREACH_DATA((map), data, __COUNTER__)
+			
+void hm_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor);
 void hm_destroy(HashMap *hm);
 
 void hm_add(HashMap *hm, void *key, void *element);
-void *hm_get(HashMap *hm, void *key);
-void *hm_remove(HashMap *hm, void *key);
+void *hm_get(HashMap *hm, const void *key);
+void *hm_remove(HashMap *hm, const void *key);
 
-u32 vec3i_hash(void *key);
-i32 vec3i_cmp(void *key, void *arg);
+u64 vec3i_hash(const void *key);
+i32 vec3i_cmp(const void *key, const void *arg);
 
-u32 u32_hash(void *key);
-i32 u32_cmp(void *key, void *arg);
+u64 u64_hash(const void *key);
+i32 u64_cmp(const void *key, const void *arg);
+
+u64 u64_array_hash(const void *key);
+i32 u64_array_cmp(const void *key, const void *arg);
 #endif

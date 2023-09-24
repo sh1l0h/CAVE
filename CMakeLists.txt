@@ -31,7 +31,9 @@ add_executable(${PROJECT_NAME}
     src/data_structures/linked_list.c
     src/graphics/mesh.c
     src/core/log.c
-    src/ECS/entity_manager.c
+    src/ECS/ecs.c
+    src/ECS/components.c
+    src/data_structures/array_list.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

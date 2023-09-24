@@ -1,6 +1,7 @@
 #include "../../include/world/world.h"
 #include "../../include/world/block.h"
 #include "../../include/core/state.h"
+#include "../../include/ECS/ecs.h"
 
 static void world_make_neighbors_dirty(World *world, const Vec3i *chunk_pos)
 {
@@ -277,7 +278,7 @@ static void world_check_tasks(World *world)
 
 void world_update(World *world)
 {
-	Transform *transform = transform_get(state.player.id);
+	Transform *transform = ecs_get_component(state.player_id, CMP_Transform);
 
 	world_center_around_pos(world, &transform->position);
 
@@ -288,7 +289,7 @@ void world_render(World *world)
 {
 	glUseProgram(state.shaders[SHADER_CHUNK].program);
 
-	Camera *camera = camera_get(state.main_camera);
+	Camera *camera = ecs_get_component(state.player_id, CMP_Camera);
 
 	glUniformMatrix4fv(state.view_uniform, 1, GL_TRUE, (GLfloat *)camera->view);
 	glUniformMatrix4fv(state.projection_uniform, 1, GL_TRUE, (GLfloat *)camera->projection);
@@ -349,7 +350,7 @@ void world_block_to_chunk_and_offset(World *world, const Vec3i *block_pos, Chunk
 	*block_offset = (Vec3i) {{offset.x % CHUNK_SIZE, offset.y % CHUNK_SIZE, offset.z % CHUNK_SIZE}};
 }
 
-void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, i32 *facing_dir)
+void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, Direction *facing_dir)
 {
 	Vec3i block_pos = POS_2_BLOCK((*origin));
 

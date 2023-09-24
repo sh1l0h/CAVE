@@ -1,31 +1,4 @@
 #include "../../include/ECS/transform.h"
-#include "../../include/core/state.h"
-
-void transform_add(u32 id, const Vec3 *pos, const Vec3 *rotation)
-{
-	if(id >= state.entity_manager.max_id || !state.entity_manager.entities[id]) {
-		log_error("Attempt to add a transform to a nonexistent entity<%d>", id);
-		return;
-	}
-
-	Transform *transform = calloc(1, sizeof(Transform));
-
-	transform->id = id;
-	zinc_vec3_copy(pos, &transform->position);
-	zinc_vec3_copy(rotation, &transform->rotation);
-
-	hm_add(&state.transforms, &transform->id, transform);
-
-	log_info("Transform component added to entity<%d>", id);
-}
-
-Transform *transform_get(u32 id)
-{
-	if(id >= state.entity_manager.max_id || !state.entity_manager.entities[id]) return NULL;
-
-	Transform *transform = hm_get(&state.transforms, &id);
-	return transform;
-}
 
 static void transform_update(Transform *transform)
 {
@@ -44,12 +17,13 @@ static void transform_update(Transform *transform)
 
 void transform_update_all()
 {
-	HashMap *hm = &state.transforms;
-	for(u32 i = 0; i < hm->allocated_buckets; i++){
-		struct HashMapNode *curr = hm->buckets[i];
-		while(curr != NULL){
-			transform_update(curr->data);
-			curr = curr->next;
-		}
+	HashMap *entities = &archetype_component_table[CMP_Transform];
+	
+	struct ArchetypeRecord *record;
+
+	hm_foreach_data(entities, record){
+		Archetype *archetype = record->archetype;
+		for(u64 j = 0; j < archetype->entities.size; j++)
+			transform_update(al_get(&archetype->components[record->index], j));
 	}
 }
