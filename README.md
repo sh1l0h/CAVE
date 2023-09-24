@@ -7,7 +7,7 @@
 - [ ] Greedy meshing
 - [x] Ambient occlusion 
 - [ ] Multithreaded flood-fill lighting
-- [ ] Fast ECS
+- [x] Fast ECS
 - [ ] Physics
 - [ ] UI
 - [ ] Item system
