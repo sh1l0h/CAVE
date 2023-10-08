@@ -10,6 +10,7 @@
 #include "../include/ECS/transform.h"
 #include "../include/ECS/camera.h"
 #include "../include/ECS/player.h"
+#include "../include/graphics/gizmos.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
@@ -31,6 +32,9 @@ void init()
 	atlas_create(&state.block_atlas, "./res/imgs/block_textures.png", 16, 16);
 	ctp_create(&state.chunk_thread_pool);
 
+	gizmos_init();
+	gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
+
 	ecs_init();
 	cmp_init();
 
@@ -38,12 +42,17 @@ void init()
 	ecs_add_component(state.player_id, CMP_Transform);
 	ecs_add_component(state.player_id, CMP_Camera);
 	ecs_add_component(state.player_id, CMP_Player);
+	ecs_add_component(state.player_id, CMP_BoxCollider);
 
 	Camera *camera = ecs_get_component(state.player_id, CMP_Camera);
 	camera->fov = ZINC_PI_OVER_2;
 	camera->near = 0.01f;
 	camera->far = 1000.0f;
 	camera->aspect_ratio = 16.0f/9.0f;
+
+	BoxCollider *collider = ecs_get_component(state.player_id, CMP_BoxCollider);
+	collider->half_size = (Vec3){{0.4f, 0.9f, 0.4f}};
+	collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
 
 	//432134
 	i32 seed = time(NULL);
@@ -156,10 +165,10 @@ int main()
 		state.mouse_buttons[0] = mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT);
 		state.mouse_buttons[1] = mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT);
 
+		player_update_mouse_all();
 		while(time_to_process >= ms_per_update){
 			f32 dt = 1.0f/ UPDATES_PER_SECOND;
 
-			player_update_mouse_all();
 			transform_update_all();
 			player_update_movement_all(dt);
 
@@ -172,11 +181,11 @@ int main()
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		world_render(&state.world);
+
 		frame_count++;
 
 		if(second_count >= 1000){
 			log_debug("FPS: %f", frame_count*1000.0f/second_count);
-			printf("FPS: %f\n", frame_count*1000.0f/second_count);
 			second_count = 0;
 			frame_count = 0;
 		}
@@ -190,6 +199,7 @@ int main()
 			bm_render(&state.block_marker, &(Vec3){{block_marker_pos.x,block_marker_pos.y,block_marker_pos.z}}, player->selected_block_dir);
 		}
 
+		gizmos_draw();
 		SDL_GL_SwapWindow(window);
 
 		SDL_Delay(1);

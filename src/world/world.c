@@ -149,7 +149,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 			f32 mountain_noise = noise_2d_octave_perlin(&state.noise, &(Vec2){{block_pos.x / 900.0f, block_pos.y / 900.0f}}, 3, 0.5f);	
 
 			bool is_air_above = true;
-			for(i32 y = 239; y >= 0; y--){
+			for(i32 y = CHUNK_COLUMN_HEIGHT*CHUNK_SIZE - 1; y >= 0; y--){
 				Vec3i offset = {{x, y % CHUNK_SIZE, z}};
 				Chunk *chunk = column[y / CHUNK_SIZE];
 

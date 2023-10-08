@@ -12,6 +12,8 @@ typedef enum ComponentId {
 	CMP_Transform = 0,
 	CMP_Camera,
 	CMP_Player,
+	CMP_BoxCollider,
+	CMP_RigidBody,
 
 	CMP_COUNT // Always keep this as the last entry
 } ComponentId;
@@ -49,5 +51,12 @@ typedef struct BoxCollider {
 	Vec3 half_size;
 	Vec3 offset;
 } BoxCollider;
+
+typedef struct RigidBody {
+	Vec3 velocity;
+	Vec3 acceleration;
+	bool on_ground;
+	bool gravity;
+} RigidBody;
 
 #endif

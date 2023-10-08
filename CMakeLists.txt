@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME}
     src/graphics/texture.c
     src/graphics/atlas.c
     src/graphics/shader.c
+    src/graphics/gizmos.c
     src/ECS/camera.c
     src/ECS/player.c
     src/ECS/transform.c
