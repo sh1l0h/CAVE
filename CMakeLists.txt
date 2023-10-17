@@ -12,8 +12,13 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
 add_executable(${PROJECT_NAME} 
-    src/main.c
+    src/core/noise.c
+    src/core/block_marker.c
+    src/core/log.c
+    src/core/chunk_thread_pool.c
     src/core/io.c
+    src/core/cJSON.c
+    src/main.c
     src/world/world.c
     src/world/chunk.c
     src/world/block.c
@@ -21,20 +26,16 @@ add_executable(${PROJECT_NAME}
     src/graphics/atlas.c
     src/graphics/shader.c
     src/graphics/gizmos.c
+    src/graphics/mesh_buffer.c
+    src/graphics/mesh.c
     src/ECS/camera.c
     src/ECS/player.c
     src/ECS/transform.c
     src/ECS/rigid_body.c
-    src/graphics/mesh_buffer.c
-    src/core/noise.c
-    src/core/block_marker.c
-    src/data_structures/hash_map.c
-    src/core/chunk_thread_pool.c
-    src/data_structures/linked_list.c
-    src/graphics/mesh.c
-    src/core/log.c
     src/ECS/ecs.c
     src/ECS/components.c
+    src/data_structures/hash_map.c
+    src/data_structures/linked_list.c
     src/data_structures/array_list.c
     )
 
