@@ -1,0 +1,20 @@
+{
+    "ambientocclusion": true,
+    "cuboids": 
+    [
+        {
+            "id": 0,
+            "from": [0, 0, 8],
+            "to": [16, 16, 16],
+            "faces":
+            {
+                "north": {"uv_from": [0,0], "uv_to": [16, 16], "cullface":"north"},
+                "east": {"uv_from": [8,0], "uv_to": [16, 16], "cullface":"east"},
+                "top": {"uv_from": [0,8], "uv_to": [16, 16], "cullface":"top"},
+                "west": {"uv_from": [0,0], "uv_to": [8, 16], "cullface":"west"},
+                "south": {"uv_from": [0,0], "uv_to": [16, 16]},
+                "bottom": {"uv_from": [0,8], "uv_to": [16, 16], "cullface":"bottom"}
+            } 
+        }
+    ]
+}

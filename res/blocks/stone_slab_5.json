@@ -1,0 +1,35 @@
+{
+    "id": 5,
+    "name": "Stone Slab",
+    "variants":
+    [
+        {
+            "meta": 0,
+            "textures": 
+            [
+                {
+                    "id": 0,
+                    "faces":
+                    {
+                        "all": "textures/stone"
+                    }
+                }
+            ],
+            "model": "models/slab_bottom"
+        },
+        {
+            "meta": 1,
+            "textures": 
+            [
+                {
+                    "id": 0,
+                    "faces":
+                    {
+                        "all": "textures/stone"
+                    }
+                }
+            ],
+            "model": "models/slab_top"
+        }
+    ]
+}

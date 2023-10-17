@@ -1,0 +1,22 @@
+{
+    "id": 2,
+    "name": "Dirt",
+    "transparent": false,
+    "variants": 
+    [
+        {
+            "meta": "0", 
+            "textures": 
+            [
+                {
+                    "id": 0,
+                    "faces":
+                    {
+                        "all": "textures/dirt"
+                    }
+                }
+            ],
+            "model": "models/cube"
+        }
+    ]
+}

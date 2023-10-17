@@ -1,0 +1,22 @@
+{
+    "id": 4,
+    "name": "Cobblestone",
+    "transparent": false,
+    "variants": 
+    [
+        {
+            "meta": "0", 
+            "textures": 
+            [
+                {
+                    "id": 0,
+                    "faces":
+                    {
+                        "all": "textures/cobblestone"
+                    }
+                }
+            ],
+            "model": "models/cube"
+        }
+    ]
+}
