@@ -6,7 +6,7 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
 
-#define CHUNK_SIZE 16
+#define CHUNK_SIZE 15
 #define CHUNK_VOLUME CHUNK_SIZE*CHUNK_SIZE*CHUNK_SIZE
 
 #define BLOCK_ID_MASK 0x00FF
@@ -15,15 +15,15 @@
 #define BLOCK_LIGHT_MASK 0xFF00
 #define BLOCK_LIGHT_OFFSET 8
 
-#define CHUNK_IN_BOUNDS(pos) (pos.x >= 0 && pos.x < CHUNK_SIZE &&	\
-							  pos.y >= 0 && pos.y < CHUNK_SIZE &&	\
-							  pos.z >= 0 && pos.z < CHUNK_SIZE)
+#define CHUNK_IN_BOUNDS(pos) ((pos).x >= 0 && (pos).x < CHUNK_SIZE &&	\
+							  (pos).y >= 0 && (pos).y < CHUNK_SIZE &&	\
+							  (pos).z >= 0 && (pos).z < CHUNK_SIZE)
 
-#define CHUNK_ON_BOUNDS(pos) (pos.x == 0 || pos.x == CHUNK_SIZE - 1 || \
-							  pos.y == 0 || pos.y == CHUNK_SIZE - 1 || \
-							  pos.z == 0 || pos.z == CHUNK_SIZE - 1)
+#define CHUNK_ON_BOUNDS(pos) ((pos).x == 0 || (pos).x == CHUNK_SIZE - 1 || \
+							  (pos).y == 0 || (pos).y == CHUNK_SIZE - 1 || \
+							  (pos).z == 0 || (pos).z == CHUNK_SIZE - 1)
 
-#define CHUNK_OFFSET_2_INDEX(pos) (pos.y + pos.x*CHUNK_SIZE + pos.z*CHUNK_SIZE*CHUNK_SIZE)
+#define CHUNK_OFFSET_2_INDEX(pos) ((pos).y + (pos).x*CHUNK_SIZE + (pos).z*CHUNK_SIZE*CHUNK_SIZE)
 
 // vertex input u32
 //[2:31] - ao

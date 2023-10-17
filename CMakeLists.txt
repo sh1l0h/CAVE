@@ -24,6 +24,7 @@ add_executable(${PROJECT_NAME}
     src/ECS/camera.c
     src/ECS/player.c
     src/ECS/transform.c
+    src/ECS/rigid_body.c
     src/graphics/mesh_buffer.c
     src/core/noise.c
     src/core/block_marker.c

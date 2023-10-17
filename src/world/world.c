@@ -420,7 +420,7 @@ void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_d
 
 		world_block_to_chunk_and_offset(world, &block_pos, chunk, block_offset);
 		if(*chunk){
-			u16 block_id = (*chunk)->data[CHUNK_OFFSET_2_INDEX((*block_offset))] & BLOCK_ID_MASK;
+			u16 block_id = (*chunk)->data[CHUNK_OFFSET_2_INDEX(*block_offset)] & BLOCK_ID_MASK;
 			if(!blocks[block_id].is_transparent) return;
 		}
 	}

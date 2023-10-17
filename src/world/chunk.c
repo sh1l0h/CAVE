@@ -507,7 +507,7 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 	chunk->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
 	chunk->is_dirty = true;
 
-	if(CHUNK_ON_BOUNDS((*pos))){
+	if(CHUNK_ON_BOUNDS(*pos)){
 		Chunk *neighbors[3] = {NULL, NULL, NULL};
 
 		Vec3i tmp;

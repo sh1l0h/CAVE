@@ -6,7 +6,7 @@
 #include "../data_structures/hash_map.h"
 #include "../data_structures/linked_list.h"
 
-#define WORLD_VOLUME(world) (world->chunks_size.x * world->chunks_size.y * world->chunks_size.z)
+#define WORLD_VOLUME(world) ((world)->chunks_size.x * (world)->chunks_size.y * (world)->chunks_size.z)
 
 #define CHUNK_COLUMN_HEIGHT 15
 

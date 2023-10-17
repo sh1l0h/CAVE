@@ -54,7 +54,7 @@ typedef struct BoxCollider {
 
 typedef struct RigidBody {
 	Vec3 velocity;
-	Vec3 acceleration;
+
 	bool on_ground;
 	bool gravity;
 } RigidBody;

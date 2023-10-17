@@ -10,6 +10,7 @@
 #include "../include/ECS/transform.h"
 #include "../include/ECS/camera.h"
 #include "../include/ECS/player.h"
+#include "../include/ECS/rigid_body.h"
 #include "../include/graphics/gizmos.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -43,6 +44,10 @@ void init()
 	ecs_add_component(state.player_id, CMP_Camera);
 	ecs_add_component(state.player_id, CMP_Player);
 	ecs_add_component(state.player_id, CMP_BoxCollider);
+	ecs_add_component(state.player_id, CMP_RigidBody);
+
+	Transform *transform = ecs_get_component(state.player_id, CMP_Transform);
+	transform->position = (Vec3) {{0, 250, 0}};
 
 	Camera *camera = ecs_get_component(state.player_id, CMP_Camera);
 	camera->fov = ZINC_PI_OVER_2;
@@ -170,10 +175,9 @@ int main()
 			f32 dt = 1.0f/ UPDATES_PER_SECOND;
 
 			transform_update_all();
+			rb_update_all(dt);
 			player_update_movement_all(dt);
-
 			camera_update_all();
-
 			world_update(&state.world);
 
 			time_to_process -= ms_per_update;
