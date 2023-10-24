@@ -1,0 +1,22 @@
+{
+    "id": 3,
+    "name": "Stone",
+    "transparent": false,
+    "variants": 
+    [
+        {
+            "meta": "0", 
+            "textures": 
+            [
+                {
+                    "id": 0,
+                    "faces":
+                    {
+                        "all": "textures/stone.png"
+                    }
+                }
+            ],
+            "model": "models/cube.json"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+    "id": 1,
+    "name": "Grass Block",
+    "transparent": false,
+    "variants": 
+    [
+        {
+            "meta": "0", 
+            "textures": 
+            [
+                {
+                    "id": 0,
+                    "faces":
+                    {
+                        "north": "textures/grass_block_side.png",
+                        "east": "textures/grass_block_side.png",
+                        "south": "textures/grass_block_side.png",
+                        "west": "textures/grass_block_side.png",
+                        "top": "textures/grass_block_top.png",
+                        "bottom": "textures/dirt.png"
+                    }
+                }
+            ],
+            "model": "models/cube.json"
+        }
+    ]
+}
