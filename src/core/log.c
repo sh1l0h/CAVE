@@ -30,8 +30,8 @@ void log_print(i32 type, const char *file, i32 line, const char *format, ...)
 	time_buffer[strftime(time_buffer, sizeof(time_buffer), "%H:%M:%S", localtime(&t))] = '\0';
 
 	SDL_LockMutex(log_mutex);
-	printf("\e[0;32m[%s]\e[0m %s (line %d) %s%s\e[0m:\n", time_buffer, file, line, type_colors[type], type_strings[type]);
-	vprintf(format, args);
+	fprintf(type < 2 ? stdout : stderr,"\e[0;32m[%s]\e[0m %s (line %d) %s%s\e[0m:\n", time_buffer, file, line, type_colors[type], type_strings[type]);
+	vfprintf(type < 2 ? stdout : stderr, format, args);
 	printf("\n");
 	SDL_UnlockMutex(log_mutex);
 	fflush(stdout);
