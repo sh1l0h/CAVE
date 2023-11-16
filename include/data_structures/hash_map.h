@@ -41,15 +41,15 @@ typedef struct HashMap {
 				_keep##c;										\
 				_keep##c =!_keep##c)
 
-#define hm_foreach(map, key, data) _HM_FOREACH((map), key, data, __COUNTER__)
-#define hm_foreach_data(map, data) _HM_FOREACH_DATA((map), data, __COUNTER__)
+#define hashmap_foreach(map, key, data) _HM_FOREACH((map), key, data, __COUNTER__)
+#define hashmap_foreach_data(map, data) _HM_FOREACH_DATA((map), data, __COUNTER__)
 			
-void hm_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor);
-void hm_destroy(HashMap *hm);
+void hashmap_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor);
+void hashmap_destroy(HashMap *hm, void (*free_key)(void *), void (*free_data)(void*));
 
-void hm_add(HashMap *hm, void *key, void *element);
-void *hm_get(HashMap *hm, const void *key);
-void *hm_remove(HashMap *hm, const void *key);
+void hashmap_add(HashMap *hm, void *key, void *element);
+void *hashmap_get(HashMap *hm, const void *key);
+void *hashmap_remove(HashMap *hm, const void *key);
 
 u64 vec3i_hash(const void *key);
 i32 vec3i_cmp(const void *key, const void *arg);

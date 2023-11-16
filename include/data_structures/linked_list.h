@@ -13,11 +13,12 @@ typedef struct LinkedList {
 	u32 size;
 } LinkedList;
 
-void ll_create(LinkedList *list);
-void ll_destroy(LinkedList *list);
+void linked_list_create(LinkedList *list);
+void linked_list_destroy(LinkedList *list, void (*free_element)(const void *));
 
-void ll_add(LinkedList *list, void *el);
-void ll_push(LinkedList *list, void *el);
+void linked_list_add(LinkedList *list, void *el);
+void linked_list_push(LinkedList *list, void *el);
 
-void *ll_pop(LinkedList *list);
+void *linked_list_pop(LinkedList *list);
+
 #endif
