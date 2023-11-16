@@ -1,10 +1,12 @@
 #ifndef CAVE_CHUNK_H
 #define CAVE_CHUNK_H
 
-#include "../util.h"
-#include "../graphics/mesh.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
+
+#include "../util.h"
+#include "../graphics/mesh.h"
+#include "../graphics/shader.h"
 
 #define CHUNK_SIZE 15
 #define CHUNK_VOLUME CHUNK_SIZE*CHUNK_SIZE*CHUNK_SIZE
@@ -25,19 +27,10 @@
 
 #define CHUNK_OFFSET_2_INDEX(pos) ((pos).y + (pos).x*CHUNK_SIZE + (pos).z*CHUNK_SIZE*CHUNK_SIZE)
 
-// vertex input u32
-//[2:31] - ao
-//[25:28] - Light intensity
-//[20:24] - v
-//[15:19] - u
-//[10:14] - z
-//[5:9] - y
-//[0:4] - x
-
 struct ChunkMeshArg {
 	Vec3i chunk_pos;
-	u16 *chunk_data;
-	bool **neighbors_data;
+
+	u16 *block_data;
 };
 
 typedef struct Chunk {
@@ -61,6 +54,12 @@ typedef struct Chunk {
 	GLuint VAO, VBO, IBO;
 } Chunk;
 
+extern Shader *chunk_shader;
+extern GLuint chunk_shader_view_uni; 
+extern GLuint chunk_shader_model_uni;
+extern GLuint chunk_shader_projection_uni; 
+extern GLuint chunk_shader_uv_offset_uni; 
+
 u16 chunk_generate_block(Chunk *chunk, Vec3i *offset);
 
 void chunk_create(Chunk *chunk, const Vec3i *pos);
@@ -76,6 +75,5 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg);
 void chunk_render(Chunk *chunk);
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block);
-
 
 #endif

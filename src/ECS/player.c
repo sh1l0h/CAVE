@@ -1,11 +1,10 @@
-#include "../../include/ECS/player.h"
-#include "../../include/core/state.h"
-#include "../../include/world/block.h"
-#include <SDL2/SDL.h>
+#include "../../include/ECS/ecs.h"
+#include "../../include/core/mouse.h"
+#include "../../include/core/keyboard.h"
 
 static void player_update_mouse(Transform *transform)
 {
-	zinc_vec3_add(&transform->rotation, &(Vec3){{state.rel_mouse.y/500.0f, state.rel_mouse.x/500.0f, 0.0f}}, &transform->rotation);
+	zinc_vec3_add(&transform->rotation, &(Vec3){{mouse.relative_position.y/500.0f, mouse.relative_position.x/500.0f, 0.0f}}, &transform->rotation);
 
 	if(transform->rotation.x > ZINC_PI_OVER_2 - 0.01f)
 		transform->rotation.x = ZINC_PI_OVER_2 - 0.01f;
@@ -29,49 +28,41 @@ static void player_update_movement(Player *player, Transform *transform, f32 dt)
 	Vec3 right;
 	zinc_vec3_copy(&transform->right, &right);
 
-	if(state.keyboard[SDL_SCANCODE_LCTRL]) speed *= 2;
+	//if(state.keyboard[SDL_SCANCODE_LCTRL]) speed *= 2;
 
 	Vec3 tmp;
 
-	if(state.keyboard[SDL_SCANCODE_W]){
+	if(keyboard_is_key_pressed(KEY_MOVE_FORWARD)){
 		zinc_vec3_scale(&forward, speed, &tmp);
 		zinc_vec3_add(&vel, &tmp, &vel);
 	}
-	if(state.keyboard[SDL_SCANCODE_S]){
+	if(keyboard_is_key_pressed(KEY_MOVE_BACKWARD)){
 		zinc_vec3_scale(&forward, -speed, &tmp);
 		zinc_vec3_add(&vel, &tmp, &vel);
 	}
 
-	if(state.keyboard[SDL_SCANCODE_SPACE]){
+	if(keyboard_is_key_pressed(KEY_FLY_UP)){
 		zinc_vec3_scale(&up, speed, &tmp);
 		zinc_vec3_add(&vel, &tmp, &vel);
 	}
-	if(state.keyboard[SDL_SCANCODE_LSHIFT]){
+	if(keyboard_is_key_pressed(KEY_FLY_DOWN)){
 		zinc_vec3_scale(&up, -speed, &tmp);
 		zinc_vec3_add(&vel, &tmp, &vel);
 	}
 
-	if(state.keyboard[SDL_SCANCODE_D]){
+	if(keyboard_is_key_pressed(KEY_MOVE_RIGHT)){
 		zinc_vec3_scale(&right, speed, &tmp);
 		zinc_vec3_add(&vel, &tmp, &vel);
 	}
-	if(state.keyboard[SDL_SCANCODE_A]){
+	if(keyboard_is_key_pressed(KEY_MOVE_LEFT)){
 		zinc_vec3_scale(&right, -speed, &tmp);
 		zinc_vec3_add(&vel, &tmp, &vel);
 	}
 
 	zinc_vec3_add(&vel, &transform->position, &transform->position);
-
-	world_cast_ray(&state.world,
-				   &transform->position,
-				   &transform->forward,
-				   5.0f,
-				   &player->selected_block_chunk,
-				   &player->selected_block_offset,
-				   &player->selected_block_dir);
-
 }
 
+/*
 static void player_place_block(Player *player)
 {
 	if(!player->selected_block_chunk) return;
@@ -92,42 +83,42 @@ static void player_place_block(Player *player)
 	world_block_to_chunk_and_offset(&state.world, &block_offset, &chunk, &block_offset);
 	chunk_set_block(chunk, &block_offset, BLOCK_COBBLESTONE);
 }
+*/
 
 void player_update_mouse_all()
 {
-	HashMap *players = &archetype_component_table[CMP_Player];
-	HashMap *transforms = &archetype_component_table[CMP_Transform];
+	HashMap *players = &ecs->archetype_component_table[CMP_Player];
+	HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
 
-	struct ArchetypeRecord *player_record;
+	ArchetypeRecord *player_record;
 
-	hm_foreach_data(players, player_record){
-		struct ArchetypeRecord *transform_record = hm_get(transforms, &player_record->archetype->id);
+	hashmap_foreach_data(players, player_record){
+		ArchetypeRecord *transform_record = hashmap_get(transforms, &player_record->archetype->id);
 
 		if(transform_record == NULL) continue;
 
 		Archetype *archetype = transform_record->archetype;
 		for(u64 j = 0; j < archetype->entities.size; j++){
-			player_update_mouse(al_get(&archetype->components[transform_record->index], j));
+			player_update_mouse(array_list_offset(&archetype->components[transform_record->index], j));
 		}
 	}
 }
 
 void player_update_movement_all(f32 dt)
 {
-	HashMap *players = &archetype_component_table[CMP_Player];
-	HashMap *transforms = &archetype_component_table[CMP_Transform];
+	HashMap *players = &ecs->archetype_component_table[CMP_Player];
+	HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
 
-	struct ArchetypeRecord *player_record;
-
-	hm_foreach_data(players, player_record){
-		struct ArchetypeRecord *transform_record = hm_get(transforms, &player_record->archetype->id);
+	ArchetypeRecord *player_record;
+	hashmap_foreach_data(players, player_record){
+		ArchetypeRecord *transform_record = hashmap_get(transforms, &player_record->archetype->id);
 
 		if(transform_record == NULL) continue;
 
 		Archetype *archetype = transform_record->archetype;
 		for(u64 j = 0; j < archetype->entities.size; j++){
-			player_update_movement(al_get(&archetype->components[player_record->index], j),
-								   al_get(&archetype->components[transform_record->index], j), dt);
+			player_update_movement(array_list_offset(&archetype->components[player_record->index], j),
+								   array_list_offset(&archetype->components[transform_record->index], j), dt);
 		}
 	}
 }

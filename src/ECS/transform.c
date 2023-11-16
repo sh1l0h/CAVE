@@ -1,4 +1,4 @@
-#include "../../include/ECS/transform.h"
+#include "../../include/ECS/ecs.h"
 
 static void transform_update(Transform *transform)
 {
@@ -17,13 +17,12 @@ static void transform_update(Transform *transform)
 
 void transform_update_all()
 {
-	HashMap *entities = &archetype_component_table[CMP_Transform];
+	HashMap *entities = &ecs->archetype_component_table[CMP_Transform];
 	
-	struct ArchetypeRecord *record;
-
-	hm_foreach_data(entities, record){
+	ArchetypeRecord *record;
+	hashmap_foreach_data(entities, record){
 		Archetype *archetype = record->archetype;
 		for(u64 j = 0; j < archetype->entities.size; j++)
-			transform_update(al_get(&archetype->components[record->index], j));
+			transform_update(array_list_offset(&archetype->components[record->index], j));
 	}
 }

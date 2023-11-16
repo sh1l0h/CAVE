@@ -1,42 +1,44 @@
 #include "../../include/world/world.h"
 #include "../../include/world/block.h"
-#include "../../include/core/state.h"
 #include "../../include/ECS/ecs.h"
+#include "../../include/core/chunk_thread_pool.h"
 
-static void world_make_neighbors_dirty(World *world, const Vec3i *chunk_pos)
+World *world = NULL;
+Atlas atlas;
+
+static void world_make_neighbors_dirty(const Vec3i *chunk_pos)
 {
 	for(i32 i = 0; i < 6; i++){
 		Vec3i neighbor_pos;
 		get_facing_block_offset(chunk_pos, i, &neighbor_pos);
 
-
-		Chunk *neighbor = world_get_chunk(world, &neighbor_pos);
+		Chunk *neighbor = world_get_chunk(&neighbor_pos);
 		if(neighbor == NULL) continue;
 		neighbor->is_dirty = true;
 	}
 }
 
-static void world_fill_null_chunks(World *world)
+static void world_fill_null_chunks()
 {
 	for(i32 z = 0; z < world->chunks_size.z; z++){
 		for(i32 x = 0; x < world->chunks_size.x; x++){
 			for(i32 y = 0; y < world->chunks_size.y; y++){
 
 				Vec3i offset = {{x, y, z}};
-				Chunk **curr = world->chunks + world_offset_to_index(world, &offset);
+				Chunk **curr = world->chunks + world_offset_to_index(&offset);
 
 				if(*curr != NULL) continue;
 
 				Vec3i chunk_pos;
 				zinc_vec3i_add(&offset, &world->origin, &chunk_pos);
 
-				if(hm_get(&world->chunks_in_creation, &chunk_pos) != NULL) continue;
+				if(hashmap_get(&world->chunks_in_creation, &chunk_pos) != NULL) continue;
 				
-				Chunk *chunk = hm_remove(&world->inactive_chunks, &chunk_pos);
+				Chunk *chunk = hashmap_remove(&world->inactive_chunks, &chunk_pos);
 
 				if(chunk){
 					*curr = chunk;
-					world_make_neighbors_dirty(world, &chunk->position);
+					world_make_neighbors_dirty(&chunk->position);
 					continue;
 				}
 				//TODO: check saves
@@ -46,21 +48,21 @@ static void world_fill_null_chunks(World *world)
 					chunk_create(chunk, &chunk_pos);
 					chunk_init_buffers(chunk);
 					*curr = chunk;
-					world_make_neighbors_dirty(world, &chunk->position);
+					world_make_neighbors_dirty(&chunk->position);
 					continue;
 				}
 
 				if(chunk_pos.y < 0) continue;
-														
 
 				Vec2i *column_pos = malloc(sizeof(Vec2i));
 				column_pos->x = chunk_pos.x;
 				column_pos->y = chunk_pos.z;
 
-				ChunkThreadTask *task = ctp_create_task(TASK_GEN_COLUMN, column_pos);
+				ChunkThreadTask *task = malloc(sizeof(ChunkThreadTask));
+				chunk_thread_task_create(task, TASK_GEN_COLUMN, column_pos);
 
-				ll_add(&world->tasks, task);
-				ctp_add_task(&state.chunk_thread_pool, task);
+				array_list_append(&world->tasks, &task);
+				chunk_thread_pool_add_task(task);
 
 				for(i32 i = 0; i < CHUNK_COLUMN_HEIGHT; i++){
 					Vec3i *curr = malloc(sizeof(Vec3i));
@@ -68,7 +70,7 @@ static void world_fill_null_chunks(World *world)
 					curr->y = i;
 					curr->z = column_pos->y;
 
-					hm_add(&world->chunks_in_creation, curr, curr);
+					hashmap_add(&world->chunks_in_creation, curr, curr);
 				}
 
 			}
@@ -76,7 +78,6 @@ static void world_fill_null_chunks(World *world)
 	}
 
 }
-
 
 static f32 height_spline(f32 x)
 {
@@ -87,7 +88,6 @@ static f32 height_spline(f32 x)
 	if(x <= 0.7) return 350*x - 15.0;
 	return 33.3*x + 206.67;
 }
-
 
 static void world_center_around_pos(World *world, Vec3 *pos)
 {
@@ -102,31 +102,47 @@ static void world_center_around_pos(World *world, Vec3 *pos)
 	   new_origin.z == world->origin.z) 
 		return;
 
-	log_info("Centering world around <%d, %d, %d>", center.x, center.y, center.z);
+	log_debug("Centering world around <%d, %d, %d>", center.x, center.y, center.z);
 
 	zinc_vec3i_copy(&new_origin, &world->origin);
 
-	Chunk **old_chunks = malloc(WORLD_VOLUME(world)*sizeof(Chunk *));
-	memcpy(old_chunks, world->chunks, WORLD_VOLUME(world)*sizeof(Chunk *));
-	memset(world->chunks, 0, WORLD_VOLUME(world)*sizeof(Chunk *));
+	Chunk **old_chunks = malloc(WORLD_VOLUME*sizeof(Chunk *));
+	memcpy(old_chunks, world->chunks, WORLD_VOLUME*sizeof(Chunk *));
+	memset(world->chunks, 0, WORLD_VOLUME*sizeof(Chunk *));
 
-	for(i32 i = 0; i < WORLD_VOLUME(world); i++){
+	for(i32 i = 0; i < WORLD_VOLUME; i++){
 		Chunk *curr = old_chunks[i];
 
 		if(!curr) continue;
 
-		if(!world_set_chunk(world, curr))
-			hm_add(&world->inactive_chunks, &curr->position, curr);
+		if(!world_set_chunk(curr))
+			hashmap_add(&world->inactive_chunks, &curr->position, curr);
 	}
 
 	free(old_chunks);
-	world_fill_null_chunks(world);
-
+	world_fill_null_chunks();
 }
 
 static f32 dencity_bias(f32 height, f32 base)
 {
 	return 1.0f*(base - height)/height;
+}
+
+void world_create(i32 size_x, i32 size_y, i32 size_z)
+{
+	world = malloc(sizeof(World));
+
+	i32 seed = time(NULL);
+	log_debug("World seed: %d", seed);
+	noise_create(&world->noise, seed);
+
+	hashmap_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
+	hashmap_create(&world->chunks_in_creation, 1024, vec3i_hash, vec3i_cmp, 0.8f);
+	array_list_create(&world->tasks, sizeof(ChunkThreadTask*), 1024);
+
+	world->chunks_size = (Vec3i){{size_x, size_y, size_z}};
+	world->chunks = calloc(WORLD_VOLUME, sizeof(Chunk *));
+	world->origin = (Vec3i){{0.0f, 0.0f, 0.0f}};
 }
 
 Chunk **world_generate_chunk_column(Vec2i *column_position)
@@ -146,7 +162,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 			Vec2i block_pos;
 			zinc_vec2i_add(&column_pos_in_blocks, &(Vec2i){{x, z}}, &block_pos);
 
-			f32 mountain_noise = noise_2d_octave_perlin(&state.noise, &(Vec2){{block_pos.x / 900.0f, block_pos.y / 900.0f}}, 3, 0.5f);	
+			f32 mountain_noise = noise_2d_octave_perlin(&world->noise, &(Vec2){{block_pos.x / 900.0f, block_pos.y / 900.0f}}, 3, 0.5f);	
 
 			bool is_air_above = true;
 			for(i32 y = CHUNK_COLUMN_HEIGHT*CHUNK_SIZE - 1; y >= 0; y--){
@@ -155,7 +171,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 
 				u16 block_type = BLOCK_AIR;
 
-				f32 noise_3d = noise_3d_octave_perlin(&state.noise, &(Vec3){{block_pos.x/100.0f, y/400.0f, block_pos.y/100.0f}}, 3, 0.3);
+				f32 noise_3d = noise_3d_octave_perlin(&world->noise, &(Vec3){{block_pos.x/100.0f, y/400.0f, block_pos.y/100.0f}}, 3, 0.3);
 				if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
 					if(is_air_above)
 						block_type = BLOCK_GRASS;
@@ -174,22 +190,12 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 		}
 	}
 
-	log_info("Column <%d, %d> generated", column_position->x, column_position->y);
+	log_debug("Column <%d, %d> generated", column_position->x, column_position->y);
 	return column;
 }
 
-void world_create(World *world, i32 size_x, i32 size_y, i32 size_z)
-{
-	hm_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
-	hm_create(&world->chunks_in_creation, 1024, vec3i_hash, vec3i_cmp, 0.8f);
-	ll_create(&world->tasks);
 
-	world->chunks_size = (Vec3i){{size_x, size_y, size_z}};
-	world->chunks = calloc(WORLD_VOLUME(world), sizeof(Chunk *));
-	world->origin = (Vec3i){{0.0f, 0.0f, 0.0f}};
-}
-
-static bool world_check_task(World *world, ChunkThreadTask *task)
+static bool world_check_task(ChunkThreadTask *task)
 {
 	if(SDL_TryLockMutex(task->mutex)) return false;
 
@@ -207,10 +213,10 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 
 			for(i32 y = 0; y < CHUNK_COLUMN_HEIGHT; y++){
 				Chunk *curr = column[y];
-				hm_remove(&world->chunks_in_creation, &curr->position);
+				hashmap_remove(&world->chunks_in_creation, &curr->position);
 				chunk_init_buffers(curr);
-				if(!world_set_chunk(world, curr)) hm_add(&world->inactive_chunks, &curr->position, curr);
-				else world_make_neighbors_dirty(world, &curr->position);
+				if(!world_set_chunk(curr)) hashmap_add(&world->inactive_chunks, &curr->position, curr);
+				else world_make_neighbors_dirty(&curr->position);
 			}
 
 			free(column);
@@ -221,8 +227,8 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 			struct ChunkMeshArg *arg = task->arg;
 			Mesh *mesh = task->result;
 
-			Chunk *chunk = world_get_chunk(world, &arg->chunk_pos);
-			if(chunk == NULL) chunk = hm_get(&world->inactive_chunks, &arg->chunk_pos);
+			Chunk *chunk = world_get_chunk(&arg->chunk_pos);
+			if(chunk == NULL) chunk = hashmap_get(&world->inactive_chunks, &arg->chunk_pos);
 
 			if(chunk != NULL){
 				glBindVertexArray(chunk->VAO);
@@ -236,8 +242,7 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 
 			mesh_destroy(task->result);
 			free(mesh);
-			free(arg->chunk_data);
-			for(i32 i = 0; i < 6; i++) free(arg->neighbors_data[i]);
+			free(arg->block_data);
 		}
 		break;
 	}
@@ -248,91 +253,74 @@ static bool world_check_task(World *world, ChunkThreadTask *task)
 	return true;
 }
 
-static void world_check_tasks(World *world)
+static void world_check_tasks()
 {
 	if(world->tasks.size == 0) return;
 
-	while(world->tasks.size > 0 && world_check_task(world, world->tasks.head->data)) 
-		ll_pop(&world->tasks);
-
-	if(world->tasks.size == 0) return;
-		
-	struct LinkedListNode *curr = world->tasks.head->next;
-	struct LinkedListNode *prev = world->tasks.head;
-
-	while(curr != NULL){
-		if(world_check_task(world, curr->data)){
-			world->tasks.size--;
-			prev->next = curr->next;
-			free(curr);
-			curr = prev->next;
-			continue;
-		}
-
-		prev = curr;
-		curr = curr->next;
+	for(u64 i = 0; i < world->tasks.size; i++){
+		ChunkThreadTask **task = array_list_offset(&world->tasks, i);
+		if(world_check_task(*task))
+			array_list_unordered_remove(&world->tasks, i, NULL);
 	}
-
-	world->tasks.tail = prev;
 }
 
-void world_update(World *world)
+void world_update()
 {
-	Transform *transform = ecs_get_component(state.player_id, CMP_Transform);
+	Transform *transform = ecs_get_component(ecs->player_id, CMP_Transform);
 
 	world_center_around_pos(world, &transform->position);
 
-	world_check_tasks(world);
+	world_check_tasks();
 }
 
-void world_render(World *world)
+void world_render()
 {
-	glUseProgram(state.shaders[SHADER_CHUNK].program);
+	shader_bind(chunk_shader);
 
-	Camera *camera = ecs_get_component(state.player_id, CMP_Camera);
+	Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
 
-	glUniformMatrix4fv(state.view_uniform, 1, GL_TRUE, (GLfloat *)camera->view);
-	glUniformMatrix4fv(state.projection_uniform, 1, GL_TRUE, (GLfloat *)camera->projection);
-	glUniform2fv(state.uv_offset_uniform, 1, (GLfloat *)&state.block_atlas.sprite_offset);
+	glUniformMatrix4fv(chunk_shader_view_uni, 1, GL_TRUE, (GLfloat *)camera->view);
+	glUniformMatrix4fv(chunk_shader_projection_uni, 1, GL_TRUE, (GLfloat *)camera->projection);
+	glUniform2fv(chunk_shader_uv_offset_uni, 1, (GLfloat *)&atlas.sprite_offset);
 
-	texture_bind(&state.block_atlas.texture);
+	texture_bind(&atlas.texture);
 
 	for(i32 z = 0; z < world->chunks_size.z; z++){
 		for(i32 x = 0; x < world->chunks_size.x; x++){
 			for(i32 y = 0; y < world->chunks_size.y; y++){
 				Vec3i offset = {{x, y, z}};
-				chunk_render(world->chunks[world_offset_to_index(world, &offset)]);
+				chunk_render(world->chunks[world_offset_to_index(&offset)]);
 			}
 		}
 	}
 
 }
 
-bool world_set_chunk(World *world, Chunk *chunk)
+bool world_set_chunk(Chunk *chunk)
 {
-	if(!world_is_chunk_in_bounds(world, &chunk->position)) return false;
+	if(!world_is_chunk_in_bounds(&chunk->position)) return false;
 
 	Vec3i offset;
 	zinc_vec3i_sub(&chunk->position, &world->origin, &offset);
 
-	world->chunks[world_offset_to_index(world, &offset)] = chunk;
+	world->chunks[world_offset_to_index(&offset)] = chunk;
 
 
 	return true;
 }
 
-Chunk *world_get_chunk(World *world, const Vec3i *chunk_pos)
+Chunk *world_get_chunk(const Vec3i *chunk_pos)
 {
-	if(!world_is_chunk_in_bounds(world, chunk_pos)) return NULL;
+	if(!world_is_chunk_in_bounds(chunk_pos)) return NULL;
 
 	Vec3i offset;
 	zinc_vec3i_sub(chunk_pos, &world->origin, &offset);
-	return world->chunks[world_offset_to_index(world, &offset)];
+	return world->chunks[world_offset_to_index(&offset)];
 }
 
-void world_block_to_chunk_and_offset(World *world, const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset)
+void world_block_to_chunk_and_offset(const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset)
 {
-	if(!world_is_block_in_bounds(world, block_pos)){
+	if(!world_is_block_in_bounds(block_pos)){
 		*chunk = NULL;
 		return;
 	}
@@ -346,11 +334,11 @@ void world_block_to_chunk_and_offset(World *world, const Vec3i *block_pos, Chunk
 	Vec3i chunk_offset;
 	zinc_vec3i_div(&offset, CHUNK_SIZE, &chunk_offset);
 
-	*chunk = world->chunks[world_offset_to_index(world, &chunk_offset)];
+	*chunk = world->chunks[world_offset_to_index(&chunk_offset)];
 	*block_offset = (Vec3i) {{offset.x % CHUNK_SIZE, offset.y % CHUNK_SIZE, offset.z % CHUNK_SIZE}};
 }
 
-void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, Direction *facing_dir)
+void world_cast_ray(const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, Direction *facing_dir)
 {
 	Vec3i block_pos = POS_2_BLOCK((*origin));
 
@@ -418,7 +406,7 @@ void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_d
 			*facing_dir = direction.z;
 		}
 
-		world_block_to_chunk_and_offset(world, &block_pos, chunk, block_offset);
+		world_block_to_chunk_and_offset(&block_pos, chunk, block_offset);
 		if(*chunk){
 			u16 block_id = (*chunk)->data[CHUNK_OFFSET_2_INDEX(*block_offset)] & BLOCK_ID_MASK;
 			if(!blocks[block_id].is_transparent) return;
@@ -427,12 +415,12 @@ void world_cast_ray(World *world, const Vec3 *origin, const Vec3 *dir, f32 max_d
 	*chunk = NULL;
 }
 
-inline u32 world_offset_to_index(World *world, const Vec3i *offset)
+inline u32 world_offset_to_index(const Vec3i *offset)
 {
-	return offset->y + offset->x*world->chunks_size.y + offset->z*world->chunks_size.x*world->chunks_size.y;
+	return offset->y + offset->x * world->chunks_size.y + offset->z * world->chunks_size.x * world->chunks_size.y;
 }
 
-inline bool world_is_offset_in_bounds(World *world, const Vec3i *offset)
+inline bool world_is_offset_in_bounds(const Vec3i *offset)
 {
 	return
 		offset->x >= 0 && offset->x < world->chunks_size.x &&
@@ -440,7 +428,7 @@ inline bool world_is_offset_in_bounds(World *world, const Vec3i *offset)
 		offset->z >= 0 && offset->z < world->chunks_size.z;
 }
 
-inline bool world_is_chunk_in_bounds(World *world, const Vec3i *chunk_pos)
+inline bool world_is_chunk_in_bounds(const Vec3i *chunk_pos)
 {
 	Vec3i end;
 	zinc_vec3i_add(&world->origin, &world->chunks_size, &end);
@@ -451,7 +439,7 @@ inline bool world_is_chunk_in_bounds(World *world, const Vec3i *chunk_pos)
 		chunk_pos->z >= world->origin.z && chunk_pos->z < end.z;
 }
 
-inline bool world_is_block_in_bounds(World *world, const Vec3i *block_pos)
+inline bool world_is_block_in_bounds(const Vec3i *block_pos)
 {
 	Vec3i origin_in_blocks;
 	zinc_vec3i_scale(&world->origin, CHUNK_SIZE, &origin_in_blocks);

@@ -1,7 +1,6 @@
 #include "../../include/graphics/gizmos.h"
 #include "../../include/graphics/shader.h"
 #include "../../include/ECS/ecs.h"
-#include "../../include/core/state.h"
 
 Gizmos gizmos;
 
@@ -60,8 +59,7 @@ void gizmos_set_color(f32 r, f32 g, f32 b, f32 a)
 
 void gizmos_draw_cube(Vec3 *position, Vec3 *scale)
 {
-
-	Camera *camera = ecs_get_component(state.player_id, CMP_Camera);
+	Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
 
 	glUniformMatrix4fv(gizmos.view_uniform, 1, GL_TRUE, (GLfloat *)camera->view);
 	glUniformMatrix4fv(gizmos.projection_uniform, 1, GL_TRUE, (GLfloat *)camera->projection);
@@ -85,19 +83,18 @@ void gizmos_draw()
 {
 	gizmos_begin();
 
-	HashMap *transforms = &archetype_component_table[CMP_Transform];
-	HashMap *colliders = &archetype_component_table[CMP_BoxCollider];
+	HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
+	HashMap *colliders = &ecs->archetype_component_table[CMP_BoxCollider];
 
-	struct ArchetypeRecord *collider_record;
-	hm_foreach_data(colliders, collider_record){
+	ArchetypeRecord *collider_record;
+	hashmap_foreach_data(colliders, collider_record){
 		Archetype *archetype = collider_record->archetype;
-		struct ArchetypeRecord *transform_record = hm_get(transforms, &archetype->id);
+		ArchetypeRecord *transform_record = hashmap_get(transforms, &archetype->id);
 		if(transform_record == NULL) continue;
 
 		for(u64 i = 0; i < archetype->entities.size; i++){
-			BoxCollider *collider = al_get(&archetype->components[collider_record->index], i);
-			Transform *transform = al_get(&archetype->components[transform_record->index], i);
-
+			BoxCollider *collider = array_list_offset(&archetype->components[collider_record->index], i);
+			Transform *transform = array_list_offset(&archetype->components[transform_record->index], i);
 
 			Vec3 collider_center;
 			zinc_vec3_add(&transform->position, &collider->offset, &collider_center);

@@ -4,7 +4,7 @@
 
 static i32 shader_compile(const char *shader_path, GLenum type, GLuint *shader)
 {
-	u32 src_len;
+	u64 src_len;
 	char *src = read_text_from_file(shader_path, &src_len);
 
 	if(!src){

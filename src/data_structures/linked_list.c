@@ -1,24 +1,24 @@
 #include "../../include/data_structures/linked_list.h"
 
-void ll_create(LinkedList *list)
+void linked_list_create(LinkedList *list)
 {
 	list->head = list->tail = NULL;
 	list->size = 0;
 }
 
-void ll_destroy(LinkedList *list)
+void linked_list_destroy(LinkedList *list, void (*free_element)(const void *))
 {
 	struct LinkedListNode *curr = list->head;
 
 	while(curr != NULL){
 		struct LinkedListNode *next = curr->next;
-		free(curr->data);
+		if(free_element != NULL) free_element(curr->data);
 		free(curr);
 		curr = next;
 	}
 }
 
-void ll_add(LinkedList *list, void *el)
+void linked_list_add(LinkedList *list, void *el)
 {
 	struct LinkedListNode *new_node = malloc(sizeof(struct LinkedListNode));
 	new_node->data = el;
@@ -36,7 +36,7 @@ void ll_add(LinkedList *list, void *el)
 	return;
 }
 
-void ll_push(LinkedList *list, void *el)
+void linked_list_push(LinkedList *list, void *el)
 {
 	struct LinkedListNode *new_node = malloc(sizeof(struct LinkedListNode));
 	new_node->data = el;
@@ -53,7 +53,7 @@ void ll_push(LinkedList *list, void *el)
 	return;
 }
 
-void *ll_pop(LinkedList *list)
+void *linked_list_pop(LinkedList *list)
 {
 	if(list->size == 0) return NULL;
 	list->size--;

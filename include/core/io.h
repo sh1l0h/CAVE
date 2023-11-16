@@ -5,6 +5,6 @@
 
 #define FILE_CHUNK_SIZE 128
 
-char *read_text_from_file(const char *path, u32 *len);
+char *read_text_from_file(const char *path, u64 *length);
 
 #endif

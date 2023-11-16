@@ -11,11 +11,11 @@ typedef struct MeshBuffer {
 	u32 index;
 } MeshBuffer;
 
-void mb_create(MeshBuffer *mb, u32 initial_size);
-void mb_destroy(const MeshBuffer *mb);
+void mesh_buffer_create(MeshBuffer *mb, u32 initial_size);
+void mesh_buffer_destroy(const MeshBuffer *mb);
 
-void mb_clean(MeshBuffer *mb);
+void mesh_buffer_clean(MeshBuffer *mb);
 
-void mb_append(MeshBuffer *mb, const void *data, u32 data_size);
+void mesh_buffer_append(MeshBuffer *mb, const void *data, u32 data_size);
 
 #endif

@@ -25,22 +25,26 @@ typedef struct ChunkThreadPool {
 	SDL_Thread *threads[CHUNK_THREAD_COUNT];
 	ChunkThreadTask *task_queue_head;
 	ChunkThreadTask *task_queue_tail;
+
 	u32 task_count;
+	u32 working_count;
+	u32 thread_count;
 
 	SDL_mutex *mutex;
 	SDL_cond *cond_empty;
-	u32 working_count;
 	SDL_cond *cond_work;
-
 	bool stop;
 } ChunkThreadPool;
 
-ChunkThreadTask *ctp_create_task(i32 type, void *arg);
+extern ChunkThreadPool *chunk_thread_pool;
 
-void ctp_create(ChunkThreadPool *pool); 
-void ctp_destroy(ChunkThreadPool *pool);
-void ctp_add_task(ChunkThreadPool *pool, ChunkThreadTask *task);
-void ctp_wait(ChunkThreadPool *pool);
-void ctp_stop(ChunkThreadPool *pool);
+void chunk_thread_task_create(ChunkThreadTask *task, i32 type, void *arg);
+
+void chunk_thread_pool_init();
+void chunk_thread_pool_deinit();
+
+void chunk_thread_pool_add_task(ChunkThreadTask *task);
+void chunk_thread_pool_wait();
+void chunk_thread_pool_stop();
 
 #endif

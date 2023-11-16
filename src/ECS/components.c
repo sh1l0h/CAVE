@@ -13,7 +13,7 @@ void cmp_init()
 
 i32 cmp_id_cmp(const void *a, const void *b)
 {
-	ComponentId a_cmp = *(ComponentId *)a;
-	ComponentId b_cmp = *(ComponentId *)b;
-	return a_cmp - b_cmp;
+	ComponentID *a_cmp = (ComponentID *)a;
+	ComponentID *b_cmp = (ComponentID *)b;
+	return *a_cmp - *b_cmp;
 }

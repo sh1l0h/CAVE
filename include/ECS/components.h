@@ -8,7 +8,7 @@
 
 // When adding new components,
 // don't forget to add them in cmp_init function!
-typedef enum ComponentId {
+typedef enum ComponentID {
 	CMP_Transform = 0,
 	CMP_Camera,
 	CMP_Player,
@@ -16,7 +16,7 @@ typedef enum ComponentId {
 	CMP_RigidBody,
 
 	CMP_COUNT // Always keep this as the last entry
-} ComponentId;
+} ComponentID;
 
 extern u32 component_sizes[CMP_COUNT];
 

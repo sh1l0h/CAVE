@@ -1,7 +1,7 @@
 #include "../../include/data_structures/hash_map.h"
 #include "../../include/ECS/ecs.h"
 
-void hm_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor)
+void hashmap_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor)
 {
 	hm->buckets = calloc(initial_size, sizeof(struct HashMapNode *));
 	hm->allocated_buckets = initial_size;
@@ -12,12 +12,18 @@ void hm_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), 
 	hm->cmp = cmp;
 }
 
-void hm_destroy(HashMap *hm)
+void hashmap_destroy(HashMap *hm, void (*free_key)(void *), void (*free_data)(void*))
 {
+	void *key;
+	void *data;
+	hashmap_foreach(hm, key, data){
+		if(free_key) free_key(key);
+		if(free_data) free_data(data);
+	}
 	free(hm->buckets);
 }
 
-static void hm_resize(HashMap *hm, u32 new_buckets_size)
+static void hashmap_resize(HashMap *hm, u32 new_buckets_size)
 {
 	struct HashMapNode **new_buckets = calloc(new_buckets_size, sizeof(struct HashMapNode*));
 
@@ -39,7 +45,7 @@ static void hm_resize(HashMap *hm, u32 new_buckets_size)
 	hm->allocated_buckets = new_buckets_size;
 }
 
-void hm_add(HashMap *hm, void *key, void *element)
+void hashmap_add(HashMap *hm, void *key, void *element)
 {
 	u64 index = hm->hash(key) % hm->allocated_buckets;
 
@@ -52,10 +58,10 @@ void hm_add(HashMap *hm, void *key, void *element)
 	hm->size++;
 
 	if((f32)hm->size / (f32)hm->allocated_buckets > hm->load_factor)
-		hm_resize(hm, hm->allocated_buckets*2);
+		hashmap_resize(hm, hm->allocated_buckets*2);
 }
 
-void *hm_get(HashMap *hm, const void *key)
+void *hashmap_get(HashMap *hm, const void *key)
 {
 	u64 index = hm->hash(key) % hm->allocated_buckets;
 
@@ -70,7 +76,7 @@ void *hm_get(HashMap *hm, const void *key)
 	return NULL;
 }
 
-void *hm_remove(HashMap *hm, const void *key)
+void *hashmap_remove(HashMap *hm, const void *key)
 {
 	u64 index = hm->hash(key) % hm->allocated_buckets;
 

@@ -12,12 +12,13 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
 add_executable(${PROJECT_NAME} 
+    lib/cJSON/cJSON.c
     src/core/noise.c
-    src/core/block_marker.c
     src/core/log.c
     src/core/chunk_thread_pool.c
     src/core/io.c
-    src/core/cJSON.c
+    src/core/keyboard.c
+    src/core/mouse.c
     src/main.c
     src/world/world.c
     src/world/chunk.c
@@ -37,6 +38,7 @@ add_executable(${PROJECT_NAME}
     src/data_structures/hash_map.c
     src/data_structures/linked_list.c
     src/data_structures/array_list.c
+    src/data_structures/cyclic_queue.c
     )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -53,7 +55,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${PROJECT_NAME} PRIVATE 
         -g 
-        -DCAVE_LOG
+        -DCAVE_LOG_DEBUG
         )
 endif()
 

@@ -1,25 +1,28 @@
 #include "../../include/core/chunk_thread_pool.h"
 #include "../../include/world/world.h"
 
-static int ctp_worker(void *arg)
+ChunkThreadPool *chunk_thread_pool = NULL;
+
+static int chunk_thread_pool_worker(void *arg)
 {
-	ChunkThreadPool *pool = arg;
+	(void)arg;
+	log_debug("Thread with ID %lu started", SDL_ThreadID());
 
 	while(true){
-		SDL_LockMutex(pool->mutex);
+		SDL_LockMutex(chunk_thread_pool->mutex);
 
-		while(pool->task_count == 0 && !pool->stop)
-			SDL_CondWait(pool->cond_empty, pool->mutex);
+		while(chunk_thread_pool->task_count == 0 && !chunk_thread_pool->stop)
+			SDL_CondWait(chunk_thread_pool->cond_empty, chunk_thread_pool->mutex);
 
-		if(pool->stop) break;
+		if(chunk_thread_pool->stop) break;
 
-		ChunkThreadTask *task = pool->task_queue_head;
-		pool->task_queue_head = task->next;
-		if(pool->task_count == 1) pool->task_queue_tail = NULL;
-		pool->task_count--;
-		pool->working_count++;
+		ChunkThreadTask *task = chunk_thread_pool->task_queue_head;
+		chunk_thread_pool->task_queue_head = task->next;
+		if(chunk_thread_pool->task_count == 1) chunk_thread_pool->task_queue_tail = NULL;
+		chunk_thread_pool->task_count--;
+		chunk_thread_pool->working_count++;
 
-		SDL_UnlockMutex(pool->mutex);
+		SDL_UnlockMutex(chunk_thread_pool->mutex);
 		
 		void *result = NULL;
 		switch(task->type){
@@ -36,76 +39,90 @@ static int ctp_worker(void *arg)
 		task->result = result;
 		SDL_UnlockMutex(task->mutex);
 
-		SDL_LockMutex(pool->mutex);
-		pool->working_count--;
-		if(pool->working_count == 0) SDL_CondSignal(pool->cond_work);
-		SDL_UnlockMutex(pool->mutex);
+		SDL_LockMutex(chunk_thread_pool->mutex);
+		chunk_thread_pool->working_count--;
+		if(!chunk_thread_pool->stop && chunk_thread_pool->working_count == 0 && chunk_thread_pool->task_count == 0)
+			SDL_CondSignal(chunk_thread_pool->cond_work);
+		SDL_UnlockMutex(chunk_thread_pool->mutex);
 	}
 
+	chunk_thread_pool->thread_count--;
+	SDL_CondSignal(chunk_thread_pool->cond_work);
+	SDL_UnlockMutex(chunk_thread_pool->mutex);
+
+	log_debug("Thread with ID %lu finished", SDL_ThreadID());
 	return 0;
 }
 
-ChunkThreadTask *ctp_create_task(i32 type, void *arg)
+void chunk_thread_task_create(ChunkThreadTask *task, i32 type, void *arg)
 {
-	ChunkThreadTask *result = malloc(sizeof(ChunkThreadTask));
-	result->type = type;
-	result->arg = arg;
-	result->next = NULL;
-	result->is_complete = false;
-	result->mutex = SDL_CreateMutex();
-	return result;
+	task->type = type;
+	task->arg = arg;
+	task->next = NULL;
+	task->is_complete = false;
+	task->mutex = SDL_CreateMutex();
 }
 
-void ctp_create(ChunkThreadPool *pool)
+void chunk_thread_pool_init()
 {
-	pool->task_queue_head = pool->task_queue_tail = NULL;
-	pool->task_count = 0;
-	pool->mutex = SDL_CreateMutex();
-	pool->cond_empty = SDL_CreateCond();
-	pool->cond_work = SDL_CreateCond();
-	pool->working_count = 0;
-	pool->stop = false;
+	chunk_thread_pool = malloc(sizeof(ChunkThreadPool));
+	chunk_thread_pool->task_queue_head = chunk_thread_pool->task_queue_tail = NULL;
+	chunk_thread_pool->task_count = 0;
+	chunk_thread_pool->mutex = SDL_CreateMutex();
+	chunk_thread_pool->cond_empty = SDL_CreateCond();
+	chunk_thread_pool->cond_work = SDL_CreateCond();
+	chunk_thread_pool->working_count = 0;
+	chunk_thread_pool->stop = false;
+	chunk_thread_pool->thread_count = CHUNK_THREAD_COUNT;
 
 	for(i32 i = 0; i < CHUNK_THREAD_COUNT; i++)
-		pool->threads[i] = SDL_CreateThread(ctp_worker, NULL, (void *) pool);
+		chunk_thread_pool->threads[i] = SDL_CreateThread(chunk_thread_pool_worker, NULL, (void *) chunk_thread_pool);
 }
 
-void ctp_destroy(ChunkThreadPool *pool)
+void chunk_thread_pool_deinit()
 {
-	SDL_DestroyMutex(pool->mutex);
-	SDL_DestroyCond(pool->cond_empty);
-	SDL_DestroyCond(pool->cond_work);
+	SDL_DestroyCond(chunk_thread_pool->cond_empty);
+	SDL_DestroyCond(chunk_thread_pool->cond_work);
+
+	SDL_DestroyMutex(chunk_thread_pool->mutex);
+
+	free(chunk_thread_pool);
 }
 
-void ctp_add_task(ChunkThreadPool *pool, ChunkThreadTask *task)
+void chunk_thread_pool_add_task(ChunkThreadTask *task)
 {
-	SDL_LockMutex(pool->mutex);
+	SDL_LockMutex(chunk_thread_pool->mutex);
 
-	if(pool->task_count == 0)
-		pool->task_queue_head = pool->task_queue_tail = task;
+	if(chunk_thread_pool->task_count == 0)
+		chunk_thread_pool->task_queue_head = chunk_thread_pool->task_queue_tail = task;
 	else{
-		pool->task_queue_tail->next = task;
-		pool->task_queue_tail = task;
+		chunk_thread_pool->task_queue_tail->next = task;
+		chunk_thread_pool->task_queue_tail = task;
 	}
 
-	pool->task_count++;
-	SDL_UnlockMutex(pool->mutex);
-	SDL_CondSignal(pool->cond_empty);
+	chunk_thread_pool->task_count++;
+	SDL_UnlockMutex(chunk_thread_pool->mutex);
+	SDL_CondSignal(chunk_thread_pool->cond_empty);
 }
 
-void ctp_wait(ChunkThreadPool *pool)
+void chunk_thread_pool_wait()
 {
-	SDL_LockMutex(pool->mutex);
-	while(pool->working_count != 0)
-		SDL_CondWait(pool->cond_work, pool->mutex);
-	SDL_UnlockMutex(pool->mutex);
+	SDL_LockMutex(chunk_thread_pool->mutex);
+
+	while(!chunk_thread_pool->stop && (chunk_thread_pool->working_count > 0 || chunk_thread_pool->task_count > 0))
+		SDL_CondWait(chunk_thread_pool->cond_work, chunk_thread_pool->mutex);
+
+	SDL_UnlockMutex(chunk_thread_pool->mutex);
 }
 
-void ctp_stop(ChunkThreadPool *pool)
+void chunk_thread_pool_stop()
 {
-	SDL_LockMutex(pool->mutex);
-	pool->stop = true;
-	SDL_UnlockMutex(pool->mutex);
+	SDL_LockMutex(chunk_thread_pool->mutex);
+	chunk_thread_pool->stop = true;
+	SDL_CondBroadcast(chunk_thread_pool->cond_empty);
 
-	ctp_wait(pool);
+	while(chunk_thread_pool->thread_count > 0)
+		SDL_CondWait(chunk_thread_pool->cond_work, chunk_thread_pool->mutex);
+
+	SDL_UnlockMutex(chunk_thread_pool->mutex);
 }
