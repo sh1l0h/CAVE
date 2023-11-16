@@ -1,0 +1,8 @@
+{
+	"forward":	 "W",
+	"backward":	 "S",
+	"left":		 "A",
+	"right":	 "D",
+    "fly up":    "Space",
+    "fly down":  "Left Shift"
+}
