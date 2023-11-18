@@ -27,10 +27,16 @@
 
 #define CHUNK_OFFSET_2_INDEX(pos) ((pos).y + (pos).x*CHUNK_SIZE + (pos).z*CHUNK_SIZE*CHUNK_SIZE)
 
+struct ChunkBlockData {
+	u64 owner_count;
+	u16 data[];
+};
+
 struct ChunkMeshArg {
 	Vec3i chunk_pos;
 
-	u16 *block_data;
+	//3D array of chunk block data 
+	struct ChunkBlockData *block_data[27];
 };
 
 typedef struct Chunk {
@@ -40,7 +46,7 @@ typedef struct Chunk {
 	// [12;15] - Sunlight intensity
 	// [8;11] - Light intensity 
 	// [0;7]  - Block id 
-	u16 *data;
+	struct ChunkBlockData *block_data;
 
 	// number of non-air blocks 
 	u16 block_count;
@@ -59,6 +65,8 @@ extern GLuint chunk_shader_view_uni;
 extern GLuint chunk_shader_model_uni;
 extern GLuint chunk_shader_projection_uni; 
 extern GLuint chunk_shader_uv_offset_uni; 
+
+struct ChunkBlockData *chunk_block_data_allocate();
 
 u16 chunk_generate_block(Chunk *chunk, Vec3i *offset);
 

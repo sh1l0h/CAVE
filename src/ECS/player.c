@@ -28,7 +28,7 @@ static void player_update_movement(Player *player, Transform *transform, f32 dt)
 	Vec3 right;
 	zinc_vec3_copy(&transform->right, &right);
 
-	//if(state.keyboard[SDL_SCANCODE_LCTRL]) speed *= 2;
+	if(keyboard_is_key_pressed(KEY_ACCELERATE)) speed *= 2;
 
 	Vec3 tmp;
 

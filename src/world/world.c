@@ -38,7 +38,7 @@ static void world_fill_null_chunks()
 
 				if(chunk){
 					*curr = chunk;
-					world_make_neighbors_dirty(&chunk->position);
+					//world_make_neighbors_dirty(&chunk->position);
 					continue;
 				}
 				//TODO: check saves
@@ -48,7 +48,7 @@ static void world_fill_null_chunks()
 					chunk_create(chunk, &chunk_pos);
 					chunk_init_buffers(chunk);
 					*curr = chunk;
-					world_make_neighbors_dirty(&chunk->position);
+					//world_make_neighbors_dirty(&chunk->position);
 					continue;
 				}
 
@@ -184,13 +184,12 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 					is_air_above = true;
 				}
 				
-				chunk->data[CHUNK_OFFSET_2_INDEX(offset)] = block_type;
+				chunk->block_data->data[CHUNK_OFFSET_2_INDEX(offset)] = block_type;
 				chunk->block_count++;
 			}
 		}
 	}
 
-	log_debug("Column <%d, %d> generated", column_position->x, column_position->y);
 	return column;
 }
 
@@ -242,7 +241,13 @@ static bool world_check_task(ChunkThreadTask *task)
 
 			mesh_destroy(task->result);
 			free(mesh);
-			free(arg->block_data);
+
+			for(u8 i = 0; i < 27; i++){
+				if(arg->block_data[i] == NULL) continue;
+				arg->block_data[i]->owner_count--;
+				if(arg->block_data[i]->owner_count == 0)
+					free(arg->block_data[i]);
+			}
 		}
 		break;
 	}
@@ -408,7 +413,7 @@ void world_cast_ray(const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk
 
 		world_block_to_chunk_and_offset(&block_pos, chunk, block_offset);
 		if(*chunk){
-			u16 block_id = (*chunk)->data[CHUNK_OFFSET_2_INDEX(*block_offset)] & BLOCK_ID_MASK;
+			u16 block_id = (*chunk)->block_data->data[CHUNK_OFFSET_2_INDEX(*block_offset)] & BLOCK_ID_MASK;
 			if(!blocks[block_id].is_transparent) return;
 		}
 	}

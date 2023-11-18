@@ -66,7 +66,7 @@ int main()
 	}
 
 	//vsync
-	//SDL_GL_SetSwapInterval(0);
+	SDL_GL_SetSwapInterval(0);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
@@ -116,7 +116,7 @@ int main()
 	collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
 
 	world = malloc(sizeof(World));
-	world_create(32, 20, 32);
+	world_create(64, 20, 64);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 
@@ -190,7 +190,7 @@ int main()
 		frame_count++;
 
 		if(second_count >= 1000){
-			log_debug("FPS: %f", frame_count*1000.0f/second_count);
+			log_info("FPS: %f", frame_count*1000.0f/second_count);
 			second_count = 0;
 			frame_count = 0;
 		}

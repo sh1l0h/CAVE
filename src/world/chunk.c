@@ -145,10 +145,17 @@ GLuint chunk_shader_uv_offset_uni;
 //else return BLOCK_AIR;
 //}
 
+inline struct ChunkBlockData *chunk_block_data_allocate()
+{
+	struct ChunkBlockData *result = calloc(1, sizeof(*result) + CHUNK_VOLUME * sizeof(u16));
+	result->owner_count = 1;
+	return result;
+}
+
 void chunk_create(Chunk *chunk, const Vec3i *pos)
 {
 	zinc_vec3i_copy(pos, &chunk->position);
-	chunk->data = calloc(CHUNK_VOLUME, sizeof(u16));
+	chunk->block_data = chunk_block_data_allocate();
 
 	chunk->block_count = 0;
 	chunk->is_dirty = true;
@@ -175,7 +182,8 @@ void chunk_init_buffers(Chunk *chunk)
 
 void chunk_destroy(const Chunk *chunk)
 {
-	free(chunk->data);
+	if(chunk->block_data->owner_count == 1) 
+		free(chunk->block_data);
 
 	if(chunk->has_buffers){
 		glDeleteBuffers(1, &chunk->VBO);
@@ -271,7 +279,18 @@ void get_facing_block_offset(const Vec3i *pos, Direction dir, Vec3i *dest)
 
 static u16 chunk_mesh_arg_get_block(struct ChunkMeshArg *arg, const Vec3i *offset)
 {
-	return arg->block_data[offset->y + 1 + (offset->x + 1)*(CHUNK_SIZE + 2) + (offset->z + 1)*(CHUNK_SIZE + 2)*(CHUNK_SIZE + 2)];
+	Vec3i chunk_position = BLOCK_2_CHUNK(*offset);
+	Vec3i block_offset = {{
+			(offset->x + CHUNK_SIZE) % CHUNK_SIZE,
+			(offset->y + CHUNK_SIZE) % CHUNK_SIZE,
+			(offset->z + CHUNK_SIZE) % CHUNK_SIZE,
+	}};
+
+	u8 index = (chunk_position.y + 1) + (chunk_position.x + 1) * 3 + (chunk_position.z + 1) * 9;
+	struct ChunkBlockData *block_data = arg->block_data[index];
+	if(block_data == NULL) return BLOCK_STONE;
+
+	return block_data->data[CHUNK_OFFSET_2_INDEX(block_offset)];
 }
 
 Mesh *chunk_mesh(struct ChunkMeshArg *arg)
@@ -321,36 +340,21 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 	return result;
 }
 
-static struct ChunkMeshArg *chunk_create_mesh_arg(Chunk *chunk)
+static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
 {
-	struct ChunkMeshArg *arg = malloc(sizeof(struct ChunkMeshArg));
+	struct ChunkMeshArg *arg = calloc(1, sizeof(struct ChunkMeshArg));
 
 	zinc_vec3i_copy(&chunk->position, &arg->chunk_pos);
 
-	arg->block_data = malloc(sizeof(u16)*(CHUNK_SIZE + 2)*(CHUNK_SIZE + 2)*(CHUNK_SIZE + 2));
-
-	for(i32 z = -1; z <= CHUNK_SIZE; z++){
-		for(i32 x = -1; x <= CHUNK_SIZE; x++){
-			for(i32 y = -1; y <= CHUNK_SIZE; y++){
-				i32 curr_index = y + 1 + (x + 1)*(CHUNK_SIZE + 2) + (z + 1)*(CHUNK_SIZE + 2)*(CHUNK_SIZE + 2);
-
-				Vec3i pos = {{x, y, z}};
-				Vec3i curr_chunk_pos = BLOCK_2_CHUNK(pos);
-				zinc_vec3i_add(&curr_chunk_pos, &chunk->position, &curr_chunk_pos);
-
-				Chunk *chunk = world_get_chunk(&curr_chunk_pos);
-				if(chunk == NULL){
-					arg->block_data[curr_index] = BLOCK_STONE;
-					continue;
-				}
-
-				Vec3i block_offset = {{
-						(x + CHUNK_SIZE) % CHUNK_SIZE,
-						(y + CHUNK_SIZE) % CHUNK_SIZE,
-						(z + CHUNK_SIZE) % CHUNK_SIZE,
-					}};
-
-				arg->block_data[curr_index] = chunk->data[CHUNK_OFFSET_2_INDEX(block_offset)];
+	for(i32 z = -1; z <= 1; z++){
+		for(i32 x = -1; x <= 1; x++){
+			for(i32 y = -1; y <= 1; y++){
+				Vec3i pos = {{x + chunk->position.x, y + chunk->position.y, z + chunk->position.z}};
+				Chunk *chunk = world_get_chunk(&pos);
+				if(chunk == NULL) continue;
+				chunk->block_data->owner_count++;
+				u8 index = (y + 1) + (x + 1) * 3 + (z + 1) * 9;
+				arg->block_data[index] = chunk->block_data;
 			}
 		}
 	}
@@ -365,7 +369,7 @@ void chunk_render(Chunk *chunk)
 	if(chunk->block_count == 0) return;
 
 	if(chunk->is_dirty){
-		struct ChunkMeshArg *arg = chunk_create_mesh_arg(chunk);
+		struct ChunkMeshArg *arg = chunk_mesh_arg_create(chunk);
 
 		ChunkThreadTask *task = malloc(sizeof(ChunkThreadTask));
 
@@ -394,10 +398,18 @@ void chunk_render(Chunk *chunk)
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 {
-	if(block == BLOCK_AIR) chunk->block_count--;
-	else if(chunk->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR) chunk->block_count++;
+	if(chunk->block_data->owner_count > 1){
+		struct ChunkBlockData *new_block_data = chunk_block_data_allocate();
+		memcpy(new_block_data->data, chunk->block_data->data, CHUNK_VOLUME * sizeof(u16));
 
-	chunk->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
+		chunk->block_data->owner_count--;
+		chunk->block_data = new_block_data;
+	}
+	
+	if(block == BLOCK_AIR) chunk->block_count--;
+	else if(chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR) chunk->block_count++;
+
+	chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
 	chunk->is_dirty = true;
 
 	if(CHUNK_ON_BOUNDS(*pos)){
