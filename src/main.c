@@ -65,8 +65,7 @@ int main()
 		goto End;
 	}
 
-	//vsync
-	SDL_GL_SetSwapInterval(0);
+	//SDL_GL_SetSwapInterval(0);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
@@ -116,9 +115,11 @@ int main()
 	collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
 
 	world = malloc(sizeof(World));
-	world_create(64, 20, 64);
+	world_create(32, 20, 32);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
+
+	bool show_gizmos = false;
 
 	// Main loop
 	u32 last_time = SDL_GetTicks();
@@ -137,6 +138,7 @@ int main()
 
 		// Reading inputs
 		keyboard_update_previous();
+
 		SDL_Event event;
 		while(SDL_PollEvent(&event)){
 			switch(event.type){
@@ -169,6 +171,8 @@ int main()
 			}
 		}
 
+		if(keyboard_did_key_go_down(KEY_SHOW_GIZMOS)) show_gizmos = !show_gizmos;
+
 		mouse_update();
 
 		player_update_mouse_all();
@@ -195,7 +199,8 @@ int main()
 			frame_count = 0;
 		}
 		
-		gizmos_draw();
+		if(show_gizmos) gizmos_draw();
+
 		SDL_GL_SwapWindow(window);
 
 		SDL_Delay(1);

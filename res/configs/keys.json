@@ -5,5 +5,6 @@
 	"right":	 "D",
     "fly up":    "Space",
     "fly down":  "Left Shift",
-	"accelerate": "Left Ctrl"
+	"accelerate": "Left Ctrl",
+    "gizmos": "F1"
 }

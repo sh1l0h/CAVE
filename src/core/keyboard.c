@@ -14,6 +14,7 @@ i32 keyboard_init()
 	key_names[KEY_FLY_UP] = "fly up";
 	key_names[KEY_FLY_DOWN] = "fly down";
 	key_names[KEY_ACCELERATE] = "accelerate";
+	key_names[KEY_SHOW_GIZMOS] = "gizmos";
 
 	if(keyboard_load_config()){
 		log_error("Failed to load the key config file");
