@@ -19,6 +19,7 @@ add_executable(${PROJECT_NAME}
     src/core/io.c
     src/core/keyboard.c
     src/core/mouse.c
+    src/core/direction.c
     src/main.c
     src/world/world.c
     src/world/chunk.c
