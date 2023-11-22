@@ -37,6 +37,7 @@ i32 keyboard_load_config()
 	}
 
 	cJSON *key_config_json = cJSON_ParseWithLength(key_config_text, key_config_text_len);
+	free(key_config_text);
 	if(key_config_json == NULL){
         const char *error = cJSON_GetErrorPtr();
 
