@@ -19,8 +19,50 @@ static void world_make_neighbors_dirty(const Vec3i *chunk_pos)
 	}
 }
 
-static void world_fill_null_chunks()
+static f32 height_spline(f32 x)
 {
+	if(x <= -0.8) return 96.0f;
+	if(x <= -0.4) return 110.0f*x + 184.0f;
+	if(x <= 0.3) return 21.43f*x + 148.57f;
+	if(x <= 0.6) return 133.3*x + 115.0;
+	if(x <= 0.7) return 350*x - 15.0;
+	return 33.3*x + 206.67;
+}
+
+static void world_center_around_position(World *world, Vec3 *pos)
+{
+	Vec3i center = POS_2_CHUNK(*pos);
+
+	Vec3i half_chunks_size;
+	zinc_vec3i_div(&world->chunks_size, 2, &half_chunks_size);
+
+	Vec3i new_origin;
+	zinc_vec3i_sub(&center, &half_chunks_size, &new_origin);
+
+	if(new_origin.x == world->origin.x &&
+	   new_origin.y == world->origin.y &&
+	   new_origin.z == world->origin.z) 
+		return;
+
+	log_debug("Centering world around <%d, %d, %d>", center.x, center.y, center.z);
+
+	zinc_vec3i_copy(&new_origin, &world->origin);
+
+	Chunk **old_chunks = world->chunks;
+	
+	world->chunks = calloc(WORLD_VOLUME, sizeof(Chunk *));
+
+	for(i32 i = 0; i < WORLD_VOLUME; i++){
+		Chunk *curr = old_chunks[i];
+
+		if(!curr) continue;
+
+		if(!world_set_chunk(curr))
+			hashmap_add(&world->inactive_chunks, &curr->position, curr);
+	}
+
+	free(old_chunks);
+
 	for(i32 z = 0; z < world->chunks_size.z; z++){
 		for(i32 x = 0; x < world->chunks_size.x; x++){
 			for(i32 y = 0; y < world->chunks_size.y; y++){
@@ -72,50 +114,6 @@ static void world_fill_null_chunks()
 		}
 	}
 
-}
-
-static f32 height_spline(f32 x)
-{
-	if(x <= -0.8) return 96.0f;
-	if(x <= -0.4) return 110.0f*x + 184.0f;
-	if(x <= 0.3) return 21.43f*x + 148.57f;
-	if(x <= 0.6) return 133.3*x + 115.0;
-	if(x <= 0.7) return 350*x - 15.0;
-	return 33.3*x + 206.67;
-}
-
-static void world_center_around_pos(World *world, Vec3 *pos)
-{
-	Vec3i center = POS_2_CHUNK((*pos));
-	Vec3i half_chunks_size;
-	zinc_vec3i_div(&world->chunks_size, 2, &half_chunks_size);
-	Vec3i new_origin;
-	zinc_vec3i_sub(&center, &half_chunks_size, &new_origin);
-
-	if(new_origin.x == world->origin.x &&
-	   new_origin.y == world->origin.y &&
-	   new_origin.z == world->origin.z) 
-		return;
-
-	log_debug("Centering world around <%d, %d, %d>", center.x, center.y, center.z);
-
-	zinc_vec3i_copy(&new_origin, &world->origin);
-
-	Chunk **old_chunks = malloc(WORLD_VOLUME*sizeof(Chunk *));
-	memcpy(old_chunks, world->chunks, WORLD_VOLUME*sizeof(Chunk *));
-	memset(world->chunks, 0, WORLD_VOLUME*sizeof(Chunk *));
-
-	for(i32 i = 0; i < WORLD_VOLUME; i++){
-		Chunk *curr = old_chunks[i];
-
-		if(!curr) continue;
-
-		if(!world_set_chunk(curr))
-			hashmap_add(&world->inactive_chunks, &curr->position, curr);
-	}
-
-	free(old_chunks);
-	world_fill_null_chunks();
 }
 
 static f32 dencity_bias(f32 height, f32 base)
@@ -205,9 +203,10 @@ static bool world_check_task(ChunkThreadTask *task)
 		{
 			Chunk **column = task->result;
 
+			hashmap_remove(&world->columns_in_generation, task->arg);
+
 			for(i32 y = 0; y < CHUNK_COLUMN_HEIGHT; y++){
 				Chunk *curr = column[y];
-				hashmap_remove(&world->columns_in_generation, &curr->position);
 				chunk_init_buffers(curr);
 				if(!world_set_chunk(curr)) hashmap_add(&world->inactive_chunks, &curr->position, curr);
 				else world_make_neighbors_dirty(&curr->position);
@@ -269,7 +268,7 @@ void world_update()
 {
 	Transform *transform = ecs_get_component(ecs->player_id, CMP_Transform);
 
-	world_center_around_pos(world, &transform->position);
+	world_center_around_position(world, &transform->position);
 
 	world_check_tasks();
 }
