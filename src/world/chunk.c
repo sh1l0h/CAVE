@@ -3,6 +3,7 @@
 #include "../../include/core/chunk_thread_pool.h"
 #include "../../include/world/block.h"
 #include "../../include/graphics/atlas.h"
+#include <SDL2/SDL.h>
 
 i32 direction_offset[] = {
 	1, 0, 1,
@@ -154,6 +155,8 @@ inline struct ChunkBlockData *chunk_block_data_allocate()
 
 void chunk_create(Chunk *chunk, const Vec3i *pos)
 {
+	chunk->mesh_time = 0;
+
 	zinc_vec3i_copy(pos, &chunk->position);
 	chunk->block_data = chunk_block_data_allocate();
 
@@ -250,35 +253,9 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction, Vec2i
 	mesh->index_count += 6;
 }
 
-void get_facing_block_offset(const Vec3i *pos, Direction dir, Vec3i *dest)
-{
-	zinc_vec3i_copy(pos, dest);
-	switch(dir){
-	case DIR_NORTH:
-		dest->z += 1;
-		break;
-	case DIR_EAST:
-		dest->x += 1;
-		break;
-	case DIR_SOUTH:
-		dest->z -= 1;
-		break;
-	case DIR_WEST:
-		dest->x -= 1;
-		break;
-	case DIR_TOP:
-		dest->y += 1;
-		break;
-	case DIR_BOTTOM:
-		dest->y -= 1;
-		break;
-	default:
-		break;
-	}
-}
-
 static u16 chunk_mesh_arg_get_block(struct ChunkMeshArg *arg, const Vec3i *offset)
 {
+
 	Vec3i chunk_position = BLOCK_2_CHUNK(*offset);
 	Vec3i block_offset = {{
 			(offset->x + CHUNK_SIZE) % CHUNK_SIZE,
@@ -311,7 +288,8 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 
 				for(i32 dir = 0; dir < 6; dir++){
 					Vec3i facing_block_pos;
-					get_facing_block_offset(&offset, dir, &facing_block_pos);
+					direction_get_norm(dir, &facing_block_pos);
+					zinc_vec3i_add(&facing_block_pos, &offset, &facing_block_pos);
 
 					u16 block_id = chunk_mesh_arg_get_block(arg, &facing_block_pos);
 					if(!blocks[block_id].is_transparent) continue;
@@ -343,6 +321,7 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
 {
 	struct ChunkMeshArg *arg = calloc(1, sizeof(struct ChunkMeshArg));
+	arg->mesh_time = SDL_GetTicks();
 
 	zinc_vec3i_copy(&chunk->position, &arg->chunk_pos);
 

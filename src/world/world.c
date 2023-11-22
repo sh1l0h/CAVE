@@ -10,7 +10,8 @@ static void world_make_neighbors_dirty(const Vec3i *chunk_pos)
 {
 	for(i32 i = 0; i < 6; i++){
 		Vec3i neighbor_pos;
-		get_facing_block_offset(chunk_pos, i, &neighbor_pos);
+		direction_get_norm(i, &neighbor_pos);
+		zinc_vec3i_add(&neighbor_pos, chunk_pos, &neighbor_pos);
 
 		Chunk *neighbor = world_get_chunk(&neighbor_pos);
 		if(neighbor == NULL) continue;
@@ -32,25 +33,27 @@ static void world_fill_null_chunks()
 				Vec3i chunk_pos;
 				zinc_vec3i_add(&offset, &world->origin, &chunk_pos);
 
-				if(hashmap_get(&world->chunks_in_creation, &chunk_pos) != NULL) continue;
-				
-				Chunk *chunk = hashmap_remove(&world->inactive_chunks, &chunk_pos);
-
-				if(chunk){
-					*curr = chunk;
-					//world_make_neighbors_dirty(&chunk->position);
-					continue;
-				}
-				//TODO: check saves
+				if(chunk_pos.y < 0) continue;
 
 				if(chunk_pos.y >= CHUNK_COLUMN_HEIGHT){
 					Chunk *chunk = malloc(sizeof(Chunk));
 					chunk_create(chunk, &chunk_pos);
 					chunk_init_buffers(chunk);
 					*curr = chunk;
-					//world_make_neighbors_dirty(&chunk->position);
+					world_make_neighbors_dirty(&chunk->position);
 					continue;
 				}
+
+				if(hashmap_get(&world->columns_in_generation, &(Vec2i){{chunk_pos.x, chunk_pos.z}}) != NULL) continue;
+				
+				Chunk *chunk = hashmap_remove(&world->inactive_chunks, &chunk_pos);
+
+				if(chunk){
+					*curr = chunk;
+					world_make_neighbors_dirty(&chunk->position);
+					continue;
+				}
+				//TODO: check saves
 
 				if(chunk_pos.y < 0) continue;
 
@@ -64,15 +67,7 @@ static void world_fill_null_chunks()
 				array_list_append(&world->tasks, &task);
 				chunk_thread_pool_add_task(task);
 
-				for(i32 i = 0; i < CHUNK_COLUMN_HEIGHT; i++){
-					Vec3i *curr = malloc(sizeof(Vec3i));
-					curr->x = column_pos->x;
-					curr->y = i;
-					curr->z = column_pos->y;
-
-					hashmap_add(&world->chunks_in_creation, curr, curr);
-				}
-
+				hashmap_add(&world->columns_in_generation, column_pos, column_pos);
 			}
 		}
 	}
@@ -137,7 +132,7 @@ void world_create(i32 size_x, i32 size_y, i32 size_z)
 	noise_create(&world->noise, seed);
 
 	hashmap_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
-	hashmap_create(&world->chunks_in_creation, 1024, vec3i_hash, vec3i_cmp, 0.8f);
+	hashmap_create(&world->columns_in_generation, 1024, vec2i_hash, vec2i_cmp, 0.8f);
 	array_list_create(&world->tasks, sizeof(ChunkThreadTask*), 1024);
 
 	world->chunks_size = (Vec3i){{size_x, size_y, size_z}};
@@ -212,7 +207,7 @@ static bool world_check_task(ChunkThreadTask *task)
 
 			for(i32 y = 0; y < CHUNK_COLUMN_HEIGHT; y++){
 				Chunk *curr = column[y];
-				hashmap_remove(&world->chunks_in_creation, &curr->position);
+				hashmap_remove(&world->columns_in_generation, &curr->position);
 				chunk_init_buffers(curr);
 				if(!world_set_chunk(curr)) hashmap_add(&world->inactive_chunks, &curr->position, curr);
 				else world_make_neighbors_dirty(&curr->position);
@@ -229,7 +224,8 @@ static bool world_check_task(ChunkThreadTask *task)
 			Chunk *chunk = world_get_chunk(&arg->chunk_pos);
 			if(chunk == NULL) chunk = hashmap_get(&world->inactive_chunks, &arg->chunk_pos);
 
-			if(chunk != NULL){
+			if(chunk != NULL && chunk->mesh_time < arg->mesh_time){
+				chunk->mesh_time = arg->mesh_time;
 				glBindVertexArray(chunk->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);

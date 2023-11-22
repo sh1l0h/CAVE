@@ -16,6 +16,7 @@ typedef enum Key {
 	KEY_FLY_UP,
 	KEY_FLY_DOWN,
 	KEY_ACCELERATE,
+	KEY_SHOW_GIZMOS,
 
 	KEY_COUNT // Always keep this as the last entry
 }  Key;

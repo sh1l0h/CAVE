@@ -33,14 +33,14 @@ struct ChunkBlockData {
 };
 
 struct ChunkMeshArg {
+	u32 mesh_time;
 	Vec3i chunk_pos;
-
-	//3D array of chunk block data 
+	// 3D array of chunk block data 
 	struct ChunkBlockData *block_data[27];
 };
 
 typedef struct Chunk {
-	// position in chunks
+	// Position in chunks
 	Vec3i position;
 
 	// [12;15] - Sunlight intensity
@@ -48,11 +48,14 @@ typedef struct Chunk {
 	// [0;7]  - Block id 
 	struct ChunkBlockData *block_data;
 
-	// number of non-air blocks 
+	// Number of non-air blocks 
 	u16 block_count;
 
-	// if true, the chuck needs to be remeshed
+	// If true, the chuck needs to be remeshed
 	bool is_dirty;
+
+	// Time when the current mesh was tasked to generate
+	u32 mesh_time;
 
 	bool has_buffers;
 
@@ -68,10 +71,9 @@ extern GLuint chunk_shader_uv_offset_uni;
 
 struct ChunkBlockData *chunk_block_data_allocate();
 
-u16 chunk_generate_block(Chunk *chunk, Vec3i *offset);
-
 void chunk_create(Chunk *chunk, const Vec3i *pos);
 
+// Initializes OpenGL buffers
 void chunk_init_buffers(Chunk *chunk);
 
 void chunk_destroy(const Chunk *chunk);

@@ -17,15 +17,15 @@
 typedef struct World {
 	Noise noise;
 
-	// near-bottom-left coordinate of active chunks
+	// Near-bottom-left coordinate of active chunks
 	Vec3i origin;
 
 	// 3D array of active chunks
 	Chunk **chunks;
 	Vec3i chunks_size;
 
-	// HashMap of vec3i positions of chunks that are in the process of creation
-	HashMap chunks_in_creation;
+	// Stores vec2i positions of chunk columns that are in the process of generation
+	HashMap columns_in_generation;
 
 	// List of active tasks
 	ArrayList tasks;

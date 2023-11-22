@@ -102,6 +102,19 @@ void *hashmap_remove(HashMap *hm, const void *key)
 
 	return NULL;
 }
+u64 vec2i_hash(const void *element)
+{
+	const Vec2i *pos = element;
+	return (pos->x * 84830819) ^ (pos->y * 48213883);
+}
+
+i32 vec2i_cmp(const void *element, const void *arg)
+{
+	const Vec2i *a = element;
+	const Vec2i *b = arg;
+
+	return a->x != b->x || a->y != b->y;
+}
 
 u64 vec3i_hash(const void *element)
 {

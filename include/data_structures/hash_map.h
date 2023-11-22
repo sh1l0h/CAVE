@@ -51,6 +51,9 @@ void hashmap_add(HashMap *hm, void *key, void *element);
 void *hashmap_get(HashMap *hm, const void *key);
 void *hashmap_remove(HashMap *hm, const void *key);
 
+u64 vec2i_hash(const void *key);
+i32 vec2i_cmp(const void *key, const void *arg);
+
 u64 vec3i_hash(const void *key);
 i32 vec3i_cmp(const void *key, const void *arg);
 
