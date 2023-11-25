@@ -13,8 +13,13 @@ static void archetype_destroy(Archetype *archetype)
 
 	free(archetype->components);
 
-	free(archetype);
+	struct ArchetypeEdge *edge;
+	hashmap_foreach_data(&archetype->edges, edge)
+		free(edge);
 
+	hashmap_destroy(&archetype->edges);
+
+	free(archetype);
 }
 
 void ecs_init()
@@ -44,9 +49,29 @@ void ecs_deinit()
 	array_list_destroy(&ecs->entities);
 	cyclic_queue_destroy(&ecs->free_entities);
 
-	for(u64 i = 0; i < CMP_COUNT; i++){
-		hashmap_create(ecs->archetype_component_table + i, 100, u64_hash, u64_cmp, 0.8f);
+	Archetype *archetype;
+	hashmap_foreach_data(&ecs->archetypes, archetype)
+		archetype_destroy(archetype);
+
+	hashmap_destroy(&ecs->archetypes);
+
+	for(ComponentID i = 0; i < CMP_COUNT; i++){
+		HashMap *curr = &ecs->archetype_component_table[i];
+
+		ArchetypeRecord *record;
+		hashmap_foreach_data(curr, record)
+			free(record);
+		
+		hashmap_destroy(curr);
 	}
+
+	array_list_destroy(&ecs->root_archetype.entities);
+
+	struct ArchetypeEdge *edge;
+	hashmap_foreach_data(&ecs->root_archetype.edges, edge)
+		free(edge);
+
+	hashmap_destroy(&ecs->root_archetype.edges);
 
 	free(ecs);
 	ecs = NULL;
