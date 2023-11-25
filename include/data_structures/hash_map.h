@@ -19,27 +19,27 @@ typedef struct HashMap {
 	i32 (*cmp)(const void *key, const void *arg);
 } HashMap;
 
-#define _HM_FOREACH(map, key, data, c)							\
-	for(u64 _i##c = 0, _keep##c = 1;							\
-		_keep##c && _i##c < map->allocated_buckets;				\
-		_i##c++)												\
-		for(struct HashMapNode *_node##c = map->buckets[_i##c];	\
-			_keep##c && _node##c != NULL;						\
-			_keep##c = !_keep##c, _node##c = _node##c->next)	\
-			for(key = _node##c->key, data = _node##c->data;		\
-				_keep##c;										\
-				_keep##c = !_keep##c)
+#define _HM_FOREACH(_map, _key, _data, _c)								\
+	for(u64 _i##_c = 0, _keep##_c = 1;									\
+		_keep##_c && _i##_c < (_map)->allocated_buckets;				\
+		_i##_c++)														\
+		for(struct HashMapNode *_node##_c = (_map)->buckets[_i##_c];	\
+			_keep##_c && _node##_c != NULL;								\
+			_keep##_c = !_keep##_c, _node##_c = _node##_c->next)		\
+			for((_key) = _node##_c->key, (_data) = _node##_c->data;		\
+				_keep##_c;												\
+				_keep##_c = !_keep##_c)
 
-#define _HM_FOREACH_DATA(map, _data, c)							\
-	for(u64 _i##c = 0, _keep##c = 1;							\
-		_keep##c && _i##c < map->allocated_buckets;				\
-		_i##c++)												\
-		for(struct HashMapNode *_node##c = map->buckets[_i##c];	\
-			_keep##c && _node##c != NULL;						\
-			(_keep##c = !_keep##c, _node##c = _node##c->next))	\
-			for(_data = _node##c->data;							\
-				_keep##c;										\
-				_keep##c =!_keep##c)
+#define _HM_FOREACH_DATA(_map, _data, _c)								\
+	for(u64 _i##_c = 0, _keep##_c = 1;									\
+		_keep##_c && _i##_c < (_map)->allocated_buckets;				\
+		_i##_c++)														\
+		for(struct HashMapNode *_node##_c = (_map)->buckets[_i##_c];	\
+			_keep##_c && _node##_c != NULL;								\
+			(_keep##_c = !_keep##_c, _node##_c = _node##_c->next))		\
+			for((_data) = _node##_c->data;								\
+				_keep##_c;												\
+				_keep##_c =!_keep##_c)
 
 #define hashmap_foreach(map, key, data) _HM_FOREACH((map), key, data, __COUNTER__)
 #define hashmap_foreach_data(map, data) _HM_FOREACH_DATA((map), data, __COUNTER__)
