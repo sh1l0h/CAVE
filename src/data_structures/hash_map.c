@@ -12,14 +12,8 @@ void hashmap_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *eleme
 	hm->cmp = cmp;
 }
 
-void hashmap_destroy(HashMap *hm, void (*free_key)(void *), void (*free_data)(void*))
+void hashmap_destroy(HashMap *hm)
 {
-	void *key;
-	void *data;
-	hashmap_foreach(hm, key, data){
-		if(free_key) free_key(key);
-		if(free_data) free_data(data);
-	}
 	free(hm->buckets);
 }
 

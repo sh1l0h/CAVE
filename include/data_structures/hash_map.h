@@ -39,13 +39,13 @@ typedef struct HashMap {
 			(_keep##_c = !_keep##_c, _node##_c = _node##_c->next))		\
 			for((_data) = _node##_c->data;								\
 				_keep##_c;												\
-				_keep##_c =!_keep##_c)
+				_keep##_c = !_keep##_c)
 
-#define hashmap_foreach(map, key, data) _HM_FOREACH((map), key, data, __COUNTER__)
-#define hashmap_foreach_data(map, data) _HM_FOREACH_DATA((map), data, __COUNTER__)
+#define hashmap_foreach(map, key, data) _HM_FOREACH(map, key, data, __COUNTER__)
+#define hashmap_foreach_data(map, data) _HM_FOREACH_DATA(map, data, __COUNTER__)
 			
 void hashmap_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor);
-void hashmap_destroy(HashMap *hm, void (*free_key)(void *), void (*free_data)(void*));
+void hashmap_destroy(HashMap *hm);
 
 void hashmap_add(HashMap *hm, void *key, void *element);
 void *hashmap_get(HashMap *hm, const void *key);
