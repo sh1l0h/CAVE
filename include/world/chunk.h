@@ -76,7 +76,7 @@ void chunk_create(Chunk *chunk, const Vec3i *pos);
 // Initializes OpenGL buffers
 void chunk_init_buffers(Chunk *chunk);
 
-void chunk_destroy(const Chunk *chunk);
+void chunk_destroy(Chunk *chunk);
 
 void chunk_update(Chunk *chunk);
 

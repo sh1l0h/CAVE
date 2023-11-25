@@ -183,7 +183,7 @@ void chunk_init_buffers(Chunk *chunk)
 	chunk->has_buffers = true;
 }
 
-void chunk_destroy(const Chunk *chunk)
+void chunk_destroy(Chunk *chunk)
 {
 	if(chunk->block_data->owner_count == 1) 
 		free(chunk->block_data);
@@ -193,6 +193,7 @@ void chunk_destroy(const Chunk *chunk)
 		glDeleteBuffers(1, &chunk->IBO);
 		glDeleteVertexArrays(1, &chunk->VAO);
 	}
+	free(chunk);
 }
 
 static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction, Vec2i *uv, u8 *neighboring_blocks)

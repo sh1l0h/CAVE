@@ -73,7 +73,7 @@ i32 shader_create(Shader *shader, const char *vert_shader_path, const char *frag
 		return 1;
 	}
 
-	log_info("Vertex shader at %s and fragment shader %s linked", vert_shader_path, frag_shader_path);
+	log_debug("Vertex shader at %s and fragment shader %s linked", vert_shader_path, frag_shader_path);
 
 	shader->program = program;
 	shader->vert_shader = vert_shader;

@@ -77,6 +77,7 @@ int main()
 	// Initializing the game
 	chunk_shader = malloc(sizeof(Shader));
 	if(shader_create(chunk_shader, "./res/shaders/chunk.vert", "./res/shaders/chunk.frag")) goto End;
+
 	chunk_shader_model_uni = shader_get_uniform_location(chunk_shader, "model");
 	chunk_shader_view_uni = shader_get_uniform_location(chunk_shader, "view");
 	chunk_shader_projection_uni = shader_get_uniform_location(chunk_shader, "projection");
@@ -114,8 +115,7 @@ int main()
 	collider->half_size = (Vec3){{0.4f, 0.9f, 0.4f}};
 	collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
 
-	world = malloc(sizeof(World));
-	world_create(32, 20, 32);
+	world_create(8, 8, 8);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 
@@ -208,6 +208,12 @@ int main()
 
  End:
 
+	if(ecs != NULL)
+		ecs_deinit();
+
+	if(world != NULL)
+		world_destroy();
+
 	if(chunk_thread_pool != NULL){
 		chunk_thread_pool_wait();
 		chunk_thread_pool_stop();
@@ -218,8 +224,6 @@ int main()
 		shader_destroy(chunk_shader);
 		free(chunk_shader);
 	}
-
-	//if(world != NULL) world_destroy(world);
 
 	if(context != NULL) SDL_GL_DeleteContext(context);
 	if(window != NULL) SDL_DestroyWindow(window);

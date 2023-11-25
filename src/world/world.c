@@ -121,72 +121,6 @@ static f32 dencity_bias(f32 height, f32 base)
 	return 1.0f*(base - height)/height;
 }
 
-void world_create(i32 size_x, i32 size_y, i32 size_z)
-{
-	world = malloc(sizeof(World));
-
-	i32 seed = time(NULL);
-	log_debug("World seed: %d", seed);
-	noise_create(&world->noise, seed);
-
-	hashmap_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
-	hashmap_create(&world->columns_in_generation, 1024, vec2i_hash, vec2i_cmp, 0.8f);
-	array_list_create(&world->tasks, sizeof(ChunkThreadTask*), 1024);
-
-	world->chunks_size = (Vec3i){{size_x, size_y, size_z}};
-	world->chunks = calloc(WORLD_VOLUME, sizeof(Chunk *));
-	world->origin = (Vec3i){{0.0f, 0.0f, 0.0f}};
-}
-
-Chunk **world_generate_chunk_column(Vec2i *column_position)
-{
-	Chunk **column = malloc(sizeof(Chunk *)*CHUNK_COLUMN_HEIGHT);
-
-	for(i32 i = 0; i < CHUNK_COLUMN_HEIGHT; i++) {
-		column[i] = malloc(sizeof(Chunk));
-		chunk_create(column[i], &(Vec3i){{column_position->x, i, column_position->y}});
-	}
-
-	Vec2i column_pos_in_blocks;
-	zinc_vec2i_scale(column_position, CHUNK_SIZE, &column_pos_in_blocks);
-
-	for(i32 z = 0; z < CHUNK_SIZE; z++){
-		for(i32 x = 0; x < CHUNK_SIZE; x++){
-			Vec2i block_pos;
-			zinc_vec2i_add(&column_pos_in_blocks, &(Vec2i){{x, z}}, &block_pos);
-
-			f32 mountain_noise = noise_2d_octave_perlin(&world->noise, &(Vec2){{block_pos.x / 900.0f, block_pos.y / 900.0f}}, 3, 0.5f);	
-
-			bool is_air_above = true;
-			for(i32 y = CHUNK_COLUMN_HEIGHT*CHUNK_SIZE - 1; y >= 0; y--){
-				Vec3i offset = {{x, y % CHUNK_SIZE, z}};
-				Chunk *chunk = column[y / CHUNK_SIZE];
-
-				u16 block_type = BLOCK_AIR;
-
-				f32 noise_3d = noise_3d_octave_perlin(&world->noise, &(Vec3){{block_pos.x/100.0f, y/400.0f, block_pos.y/100.0f}}, 3, 0.3);
-				if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
-					if(is_air_above)
-						block_type = BLOCK_GRASS;
-					else
-						block_type = BLOCK_STONE;
-
-					is_air_above = false;
-				}
-				else{
-					is_air_above = true;
-				}
-				
-				chunk->block_data->data[CHUNK_OFFSET_2_INDEX(offset)] = block_type;
-				chunk->block_count++;
-			}
-		}
-	}
-
-	return column;
-}
-
-
 static bool world_check_task(ChunkThreadTask *task)
 {
 	if(SDL_TryLockMutex(task->mutex)) return false;
@@ -263,6 +197,99 @@ static void world_check_tasks()
 			array_list_unordered_remove(&world->tasks, i, NULL);
 	}
 }
+
+void world_create(i32 size_x, i32 size_y, i32 size_z)
+{
+	world = malloc(sizeof(World));
+
+	i32 seed = time(NULL);
+	log_debug("World seed: %d", seed);
+	noise_create(&world->noise, seed);
+
+	hashmap_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
+	hashmap_create(&world->columns_in_generation, 1024, vec2i_hash, vec2i_cmp, 0.8f);
+	array_list_create(&world->tasks, sizeof(ChunkThreadTask*), 1024);
+
+	world->chunks_size = (Vec3i){{size_x, size_y, size_z}};
+	world->chunks = calloc(WORLD_VOLUME, sizeof(Chunk *));
+	world->origin = (Vec3i){{0.0f, 0.0f, 0.0f}};
+}
+
+void world_destroy()
+{
+	// TODO: Save chunks
+
+	for(i32 i = 0; i < WORLD_VOLUME; i++)
+		chunk_destroy(world->chunks[i]);
+
+	free(world->chunks);
+	
+	hashmap_destroy(&world->columns_in_generation);
+
+	chunk_thread_pool_wait();
+
+	world_check_tasks();
+
+	array_list_destroy(&world->tasks);
+
+	Chunk *chunk;
+	hashmap_foreach_data(&world->inactive_chunks, chunk)
+		chunk_destroy(chunk);
+
+	hashmap_destroy(&world->inactive_chunks);
+
+	free(world);
+}
+
+Chunk **world_generate_chunk_column(Vec2i *column_position)
+{
+	Chunk **column = malloc(sizeof(Chunk *)*CHUNK_COLUMN_HEIGHT);
+
+	for(i32 i = 0; i < CHUNK_COLUMN_HEIGHT; i++) {
+		column[i] = malloc(sizeof(Chunk));
+		chunk_create(column[i], &(Vec3i){{column_position->x, i, column_position->y}});
+	}
+
+	Vec2i column_pos_in_blocks;
+	zinc_vec2i_scale(column_position, CHUNK_SIZE, &column_pos_in_blocks);
+
+	for(i32 z = 0; z < CHUNK_SIZE; z++){
+		for(i32 x = 0; x < CHUNK_SIZE; x++){
+			Vec2i block_pos;
+			zinc_vec2i_add(&column_pos_in_blocks, &(Vec2i){{x, z}}, &block_pos);
+
+			f32 mountain_noise = noise_2d_octave_perlin(&world->noise, &(Vec2){{block_pos.x / 900.0f, block_pos.y / 900.0f}}, 3, 0.5f);	
+
+			bool is_air_above = true;
+			for(i32 y = CHUNK_COLUMN_HEIGHT*CHUNK_SIZE - 1; y >= 0; y--){
+				Vec3i offset = {{x, y % CHUNK_SIZE, z}};
+				Chunk *chunk = column[y / CHUNK_SIZE];
+
+				u16 block_type = BLOCK_AIR;
+
+				f32 noise_3d = noise_3d_octave_perlin(&world->noise, &(Vec3){{block_pos.x/100.0f, y/400.0f, block_pos.y/100.0f}}, 3, 0.3);
+				if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
+					if(is_air_above)
+						block_type = BLOCK_GRASS;
+					else
+						block_type = BLOCK_STONE;
+
+					is_air_above = false;
+				}
+				else{
+					is_air_above = true;
+				}
+				
+				chunk->block_data->data[CHUNK_OFFSET_2_INDEX(offset)] = block_type;
+				chunk->block_count++;
+			}
+		}
+	}
+
+	return column;
+}
+
+
 
 void world_update()
 {
