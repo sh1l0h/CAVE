@@ -2,9 +2,9 @@
 #include "../../include/world/block.h"
 #include "../../include/ECS/ecs.h"
 #include "../../include/core/chunk_thread_pool.h"
+#include "../../include/graphics/texture_manager.h"
 
 World *world = NULL;
-Atlas atlas;
 
 static void world_make_neighbors_dirty(const Vec3i *chunk_pos)
 {
@@ -306,11 +306,12 @@ void world_render()
 
 	Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
 
+
 	glUniformMatrix4fv(chunk_shader_view_uni, 1, GL_TRUE, (GLfloat *)camera->view);
 	glUniformMatrix4fv(chunk_shader_projection_uni, 1, GL_TRUE, (GLfloat *)camera->projection);
-	glUniform2fv(chunk_shader_uv_offset_uni, 1, (GLfloat *)&atlas.sprite_offset);
+	glUniform1f(chunk_shader_uv_offset_uni, 1.0f/16.0f);
 
-	texture_bind(&atlas.texture);
+	texture_manager_bind(TEXTURE_TYPE_BLOCK);
 
 	for(i32 z = 0; z < world->chunks_size.z; z++){
 		for(i32 x = 0; x < world->chunks_size.x; x++){

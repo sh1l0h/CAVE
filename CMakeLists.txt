@@ -27,12 +27,11 @@ add_executable(${PROJECT_NAME}
     src/world/world.c
     src/world/chunk.c
     src/world/block.c
-    src/graphics/texture.c
-    src/graphics/atlas.c
     src/graphics/shader.c
     src/graphics/gizmos.c
     src/graphics/mesh_buffer.c
     src/graphics/mesh.c
+    src/graphics/texture_manager.c
     src/ECS/camera.c
     src/ECS/player.c
     src/ECS/transform.c

@@ -8,6 +8,7 @@
 #include "../include/core/mouse.h"
 #include "../include/core/keyboard.h"
 #include "../include/graphics/gizmos.h"
+#include "../include/graphics/texture_manager.h"
 #include "../include/world/world.h"
 #include "../include/world/block.h"
 #include "../include/ECS/systems.h"
@@ -84,10 +85,12 @@ int main()
 	chunk_shader_uv_offset_uni = shader_get_uniform_location(chunk_shader, "uv_offset");
 
 	if(keyboard_init()) goto End;
+
 	chunk_thread_pool_init();
 
+	texture_manager_init();
+
 	block_init();
-	atlas_create(&atlas, "./res/imgs/block_textures.png", 16, 16);
 
 	gizmos_init();
 	gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
@@ -115,7 +118,7 @@ int main()
 	collider->half_size = (Vec3){{0.4f, 0.9f, 0.4f}};
 	collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
 
-	world_create(8, 8, 8);
+	world_create(16, 20, 16);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 

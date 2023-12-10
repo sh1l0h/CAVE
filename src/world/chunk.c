@@ -5,6 +5,26 @@
 #include "../../include/graphics/atlas.h"
 #include <SDL2/SDL.h>
 
+#define DATA_X_OFFSET 0u
+#define DATA_Y_OFFSET 9u
+#define DATA_Z_OFFSET 18u
+#define DATA_XYZ_MASK 0x1FFu
+
+#define DATA_U_OFFSET 27u
+#define DATA_V_OFFSET 0u
+#define DATA_UV_MASK 0x1Fu
+
+#define DATA_TEXTURE_INDEX_OFFSET 5u
+#define DATA_TEXTURE_INDEX_MASK 0xFFFu
+
+#define DATA_R_OFFSET 17u
+#define DATA_G_OFFSET 21u
+#define DATA_B_OFFSET 25u
+#define DATA_RGB_MASK 0xFu
+
+#define DATA_AMBIENT_OCCLUSION_OFFSET 29u
+#define DATA_AMBIENT_OCCLUSION_MASK 0x7u 
+
 i32 direction_offset[] = {
 	1, 0, 1,
 	1, 0, 0,
@@ -51,9 +71,9 @@ u16 index_offset[] = {
 };
 
 u8 uv_offset[] = {
-	0, 1,
-	1, 1,
-	1, 0,
+	0, 16,
+	16, 16,
+	16, 0,
 	0, 0
 };
 
@@ -174,8 +194,10 @@ void chunk_init_buffers(Chunk *chunk)
 	glGenBuffers(1, &chunk->VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
 
-	glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, 0, (void *)0);
+	glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, 2 * sizeof(GLuint), (void *)0);
 	glEnableVertexAttribArray(0);
+	glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, 2 * sizeof(GLuint), (void *)sizeof(GLuint));
+	glEnableVertexAttribArray(1);
 
 	glGenBuffers(1, &chunk->IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
@@ -185,7 +207,7 @@ void chunk_init_buffers(Chunk *chunk)
 
 void chunk_destroy(Chunk *chunk)
 {
-	if(chunk->block_data->owner_count == 1) 
+	if(chunk->block_data != NULL && chunk->block_data->owner_count == 1) 
 		free(chunk->block_data);
 
 	if(chunk->has_buffers){
@@ -196,7 +218,7 @@ void chunk_destroy(Chunk *chunk)
 	free(chunk);
 }
 
-static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction, Vec2i *uv, u8 *neighboring_blocks)
+static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction, GLint texture_index, u8 *neighboring_blocks)
 {
 	u32 origin_x = pos->x + direction_offset[direction*3];
 	u32 origin_y = pos->y + direction_offset[direction*3 + 1];
@@ -205,11 +227,11 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction, Vec2i
 	for(u32 i = 0; i < 4; i++){
 		Vec3i *offset = (Vec3i *)(vertex_offsets + direction*12 + 3*i);
 
-		u32 x = origin_x + offset->x;
-		u32 y = origin_y + offset->y;
-		u32 z = origin_z + offset->z;
-		u32 u = uv_offset[i*2] + uv->x;
-		u32 v = uv_offset[i*2 + 1] + uv->y;
+		u32 x = (origin_x + offset->x) * 16;
+		u32 y = (origin_y + offset->y) * 16;
+		u32 z = (origin_z + offset->z) * 16;
+		u32 u = uv_offset[i*2];
+		u32 v = uv_offset[i*2 + 1];
 
 		u32 brightness = 0; 
 		switch(direction){
@@ -233,16 +255,22 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction, Vec2i
 		if(!neighboring_blocks[i*2] || !neighboring_blocks[i*2 + 2])
 			ao = 7 - neighboring_blocks[i*2] - neighboring_blocks[i*2 + 1] - neighboring_blocks[i*2 + 2];
 
-		u32 vertex =
-			((ao		 &  0x7u) << 29) |
-			((brightness &  0xFu) << 25) |
-			((v			 & 0x1Fu) << 20) |
-			((u			 & 0x1Fu) << 15) |
-			((z			 & 0x1Fu) << 10) |
-			((y			 & 0x1Fu) <<  5) |
-			( x			 & 0x1Fu);
+		u32 data1 =
+			((u & DATA_UV_MASK) << DATA_U_OFFSET) |
+			((z & DATA_XYZ_MASK) << DATA_Z_OFFSET) |
+			((y & DATA_XYZ_MASK) << DATA_Y_OFFSET) |
+			((x & DATA_XYZ_MASK) << DATA_X_OFFSET);
+
+		u32 data2 =
+			((ao & DATA_AMBIENT_OCCLUSION_MASK) << DATA_AMBIENT_OCCLUSION_OFFSET) |
+			((brightness & DATA_RGB_MASK) << DATA_B_OFFSET) |
+			((brightness & DATA_RGB_MASK) << DATA_G_OFFSET) |
+			((brightness & DATA_RGB_MASK) << DATA_R_OFFSET) |
+			((texture_index & DATA_TEXTURE_INDEX_MASK) << DATA_TEXTURE_INDEX_OFFSET) |
+			((v & DATA_UV_MASK) << DATA_V_OFFSET);
 		
-		mesh_buffer_append(&mesh->vert_buffer, (void *) &vertex, sizeof(u32));
+		mesh_buffer_append(&mesh->vert_buffer, &data1, sizeof(u32));
+		mesh_buffer_append(&mesh->vert_buffer, &data2, sizeof(u32));
 	}
 
 	for(u32 i = 0; i < 6; i++){
@@ -308,9 +336,7 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 					
 					neighboring_blocks[8] = neighboring_blocks[0];
 
-					Vec2i sprite_pos;
-					blocks[id].get_sprite_position(&sprite_pos, dir);
-					chunk_append_face(result, &offset, dir, &sprite_pos, neighboring_blocks);
+					chunk_append_face(result, &offset, dir, blocks[id].textures[dir], neighboring_blocks);
 				}
 			}
 		}
@@ -363,8 +389,6 @@ void chunk_render(Chunk *chunk)
 	if(chunk->index_count == 0) return;
 
 	glBindVertexArray(chunk->VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
 
 	Vec3 pos = {{chunk->position.x*CHUNK_SIZE, chunk->position.y*CHUNK_SIZE, chunk->position.z*CHUNK_SIZE}};
 

@@ -2,6 +2,7 @@
 #define CAVE_BLOCK_H
 
 #include "../util.h"
+#include <GL/glew.h>
 
 enum BlockID {
 	BLOCK_AIR,
@@ -14,10 +15,9 @@ enum BlockID {
 
 typedef struct Block {
     i32 id;
-
 	bool is_transparent;
-	
-    void (*get_sprite_position)(Vec2i *vec, i32 direction);
+
+	GLint textures[6];
 } Block;
 
 extern Block blocks[BLOCK_COUNT];
