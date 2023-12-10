@@ -5,7 +5,6 @@
 #include "../data_structures/array_list.h"
 #include "../data_structures/hash_map.h"
 #include "../graphics/shader.h"
-#include "../graphics/atlas.h"
 #include "../core/noise.h"
 #include "../util.h"
 #include "./chunk.h"
@@ -35,7 +34,6 @@ typedef struct World {
 } World;
 
 extern World *world;
-extern Atlas atlas;
 
 void world_create(i32 size_x, i32 size_y, i32 size_z);
 
