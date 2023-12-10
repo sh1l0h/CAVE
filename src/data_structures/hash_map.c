@@ -151,18 +151,14 @@ i32 u64_cmp(const void *key, const void *arg)
 	return *(u64*)key - *(u64*)arg;
 }
 
-// FNV constants for 64-bit hashing
-#define FNV_OFFSET_BASIS 14695981039346656037ULL
-#define FNV_PRIME 1099511628211ULL
-
 u64 u64_array_hash(const void *key)
 {
 	const ArchetypeType *type = key;
 
-	u64 result = FNV_OFFSET_BASIS;
+	u64 result = 14695981039346656037ULL;
 	for(u64 i = 0; i < type->size; i++){
 		result ^= type->ids[i];
-		result *= FNV_PRIME;
+		result *= 1099511628211ULL;
 	}
 	return result;
 }
@@ -179,4 +175,22 @@ i32 u64_array_cmp(const void *key, const void *arg)
 			return 1;
 
 	return 0;
+}
+
+//source: https://stackoverflow.com/questions/8317508/hash-function-for-a-string
+u64 string_hash(const void *key)
+{
+	const char *string = key;
+
+	u64 result = 37ULL;
+	while(*string != '\0'){
+		result = (result * 54059ULL) ^ (*string * 76963ULL);
+		string++;
+	}
+	return result;
+}
+
+i32 string_cmp(const void *key, const void *arg)
+{
+	return strcmp(key, arg);
 }
