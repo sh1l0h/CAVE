@@ -1,33 +1,74 @@
-#version 410 core
+#version 330 core
 
-layout (location = 0) in uint vert_input;
+/*
+ * [27:31] - u
+ * [18:26] - z
+ * [ 9:17] - y
+ * [ 0: 8] - x
+ */
+layout (location = 0) in uint vert_data1;
+
+/*
+ * [29:31] - ambient occlusion
+ * [25:28] - light b
+ * [21:24] - light g
+ * [17:20] - light r
+ * [ 5:16] - texture index
+ * [ 0: 4] - v
+ */
+layout (location = 1) in uint vert_data2;
+
+#define DATA_X_OFFSET 0u
+#define DATA_Y_OFFSET 9u
+#define DATA_Z_OFFSET 18u
+#define DATA_XYZ_MASK 0x1FFu
+
+#define DATA_U_OFFSET 27u
+#define DATA_V_OFFSET 0u
+#define DATA_UV_MASK 0x1Fu
+
+#define DATA_TEXTURE_INDEX_OFFSET 5u
+#define DATA_TEXTURE_INDEX_MASK 0xFFFu
+
+#define DATA_R_OFFSET 17u
+#define DATA_G_OFFSET 21u
+#define DATA_B_OFFSET 25u
+#define DATA_RGB_MASK 0xFu
+
+#define DATA_AMBIENT_OCCLUSION_OFFSET 29u
+#define DATA_AMBIENT_OCCLUSION_MASK 0x7u 
+
+#define UNIT_LENGTH (1.0f / 16.0f)
+
+#define MAX_RGB_VALUE 15.0f
+#define MAX_AMBIENT_OCCLUSION 8.0f
 
 uniform mat4 model, view, projection;
-uniform vec2 uv_offset;
+uniform float uv_offset;
 
+out float vert_texture_index;
+out float vert_ambient_occlusion;
 out vec2 vert_uv;
-out float vert_brightness;
+out vec3 vert_rgb;
 
 void main() 
 {
-    uint inp = vert_input;
+	float x = UNIT_LENGTH * float((vert_data1 >> DATA_X_OFFSET) & DATA_XYZ_MASK);
+	float y = UNIT_LENGTH * float((vert_data1 >> DATA_Y_OFFSET) & DATA_XYZ_MASK);
+	float z = UNIT_LENGTH * float((vert_data1 >> DATA_Z_OFFSET) & DATA_XYZ_MASK);
 
-    uint x = inp & 0x1Fu;
-    inp = inp >> 5u;
-    uint y = inp & 0x1Fu;
-    inp = inp >> 5u;
-    uint z = inp & 0x1Fu;
+	gl_Position = projection * view * model * vec4(x, y, z, 1.0f);
 
-    gl_Position = projection * view * model * vec4(float(x), float(y), float(z), 1.0f);;
+	float u = uv_offset * float((vert_data1 >> DATA_U_OFFSET) & DATA_UV_MASK);
+	float v = uv_offset * float((vert_data2 >> DATA_V_OFFSET) & DATA_UV_MASK);
+	
+	vert_uv = vec2(u, v);
+	vert_texture_index = float((vert_data2 >> DATA_TEXTURE_INDEX_OFFSET) & DATA_TEXTURE_INDEX_MASK);
 
-    inp = inp >> 5u;
-    uint u = inp & 0x1Fu;
-    inp = inp >> 5u;
-    uint v = inp & 0x1Fu;
-    vert_uv = vec2(float(u)*uv_offset.x, float(v)*uv_offset.y);
+	float r = float((vert_data2 >> DATA_R_OFFSET) & DATA_RGB_MASK) / MAX_RGB_VALUE;
+	float g = float((vert_data2 >> DATA_G_OFFSET) & DATA_RGB_MASK) / MAX_RGB_VALUE;
+	float b = float((vert_data2 >> DATA_B_OFFSET) & DATA_RGB_MASK) / MAX_RGB_VALUE;
+	vert_rgb = vec3(r, g, b);
 
-    inp = inp >> 5u;
-	uint brightness = inp & 0xFu;
-	inp = inp >> 4u;
-    vert_brightness = (float(brightness)*float(inp & 0x7u)) / (15.0f*7.0f);
+	vert_ambient_occlusion = float((vert_data2 >> DATA_AMBIENT_OCCLUSION_OFFSET) & DATA_AMBIENT_OCCLUSION_MASK) / MAX_AMBIENT_OCCLUSION;
 }
