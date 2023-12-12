@@ -26,9 +26,6 @@ typedef struct World {
 	// Stores vec2i positions of chunk columns that are in the process of generation
 	HashMap columns_in_generation;
 
-	// List of active tasks
-	ArrayList tasks;
-
 	// HashMap of chunks that are loaded but inactive
 	HashMap inactive_chunks;
 } World;
@@ -48,6 +45,8 @@ Chunk **world_generate_chunk_column(Vec2i *column_position);
 bool world_set_chunk(Chunk *chunk);
 
 Chunk *world_get_chunk(const Vec3i *chunk_pos);
+
+void world_make_neighbors_dirty(const Vec3i *chunk_pos);
 
 void world_block_to_chunk_and_offset(const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset);
 

@@ -118,7 +118,7 @@ int main()
 	collider->half_size = (Vec3){{0.4f, 0.9f, 0.4f}};
 	collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
 
-	world_create(16, 20, 16);
+	world_create(32, 20, 32);
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 

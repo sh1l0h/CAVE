@@ -206,6 +206,7 @@ void chunk_init_buffers(Chunk *chunk)
 
 void chunk_destroy(Chunk *chunk)
 {
+    if(chunk == NULL) return;
     if(chunk->block_data != NULL && chunk->block_data->owner_count == 1) 
         free(chunk->block_data);
 
@@ -377,9 +378,9 @@ void chunk_render(Chunk *chunk)
         struct ChunkMeshArg *arg = chunk_mesh_arg_create(chunk);
 
         ChunkThreadTask *task = malloc(sizeof(ChunkThreadTask));
+        task->type = TASK_MESH_CHUNK;
+        task->arg = arg;
 
-        chunk_thread_task_create(task, TASK_MESH_CHUNK, arg);
-        array_list_append(&world->tasks, &task);
         chunk_thread_pool_add_task(task);
 
         chunk->is_dirty = false;

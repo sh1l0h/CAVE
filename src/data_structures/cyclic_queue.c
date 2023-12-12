@@ -28,6 +28,7 @@ void cyclic_queue_copy(CyclicQueue *queue, u64 index, void *dest)
 	memcpy(dest, src, queue->element_size);
 }
 
+// TODO: reimplement this function with cyclic_queue_to_array
 void cyclic_queue_resize(CyclicQueue *queue, u64 new_size)
 {
 	if(queue->allocated_elements == new_size) return;
@@ -85,7 +86,7 @@ void cyclic_queue_enqueue(CyclicQueue *queue, void *element)
 
 	queue->size++;
 
-	u8 *new_element = cyclic_queue_offset(queue, queue->end);
+	u8 *new_element = queue->data + queue->end * queue->element_size;
 	memcpy(new_element, element, queue->element_size); 
 
 	queue->end = (queue->end + 1) % queue->allocated_elements;

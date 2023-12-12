@@ -6,18 +6,6 @@
 
 World *world = NULL;
 
-static void world_make_neighbors_dirty(const Vec3i *chunk_pos)
-{
-    for(i32 i = 0; i < 6; i++){
-        Vec3i neighbor_pos;
-        direction_get_norm(i, &neighbor_pos);
-        zinc_vec3i_add(&neighbor_pos, chunk_pos, &neighbor_pos);
-
-        Chunk *neighbor = world_get_chunk(&neighbor_pos);
-        if(neighbor == NULL) continue;
-        neighbor->is_dirty = true;
-    }
-}
 
 static f32 height_spline(f32 x)
 {
@@ -104,9 +92,9 @@ static void world_center_around_position(World *world, Vec3 *pos)
                 column_pos->y = chunk_pos.z;
 
                 ChunkThreadTask *task = malloc(sizeof(ChunkThreadTask));
-                chunk_thread_task_create(task, TASK_GEN_COLUMN, column_pos);
+                task->type = TASK_GEN_COLUMN;
+                task->arg = column_pos;
 
-                array_list_append(&world->tasks, &task);
                 chunk_thread_pool_add_task(task);
 
                 hashmap_add(&world->columns_in_generation, column_pos, column_pos);
@@ -121,83 +109,6 @@ static f32 dencity_bias(f32 height, f32 base)
     return 1.0f*(base - height)/height;
 }
 
-static bool world_check_task(ChunkThreadTask *task)
-{
-    if(SDL_TryLockMutex(task->mutex)) return false;
-
-    if(!task->is_complete){
-        SDL_UnlockMutex(task->mutex);
-        return false;
-    }
-
-    SDL_UnlockMutex(task->mutex);
-
-    switch(task->type){
-    case TASK_GEN_COLUMN:
-        {
-            Chunk **column = task->result;
-
-            hashmap_remove(&world->columns_in_generation, task->arg);
-
-            for(i32 y = 0; y < CHUNK_COLUMN_HEIGHT; y++){
-                Chunk *curr = column[y];
-                chunk_init_buffers(curr);
-                if(!world_set_chunk(curr)) hashmap_add(&world->inactive_chunks, &curr->position, curr);
-                else world_make_neighbors_dirty(&curr->position);
-            }
-
-            free(column);
-        }
-        break;
-    case TASK_MESH_CHUNK:
-        {
-            struct ChunkMeshArg *arg = task->arg;
-            Mesh *mesh = task->result;
-
-            Chunk *chunk = world_get_chunk(&arg->chunk_pos);
-            if(chunk == NULL) chunk = hashmap_get(&world->inactive_chunks, &arg->chunk_pos);
-
-            if(chunk != NULL && chunk->mesh_time < arg->mesh_time){
-                chunk->mesh_time = arg->mesh_time;
-                glBindVertexArray(chunk->VAO);
-                glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
-
-                glBufferData(GL_ARRAY_BUFFER, mesh->vert_buffer.index, mesh->vert_buffer.data, GL_DYNAMIC_DRAW);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_buffer.index, mesh->index_buffer.data, GL_DYNAMIC_DRAW);
-                chunk->index_count = mesh->index_count;
-            }
-
-            mesh_destroy(task->result);
-            free(mesh);
-
-            for(u8 i = 0; i < 27; i++){
-                if(arg->block_data[i] == NULL) continue;
-                arg->block_data[i]->owner_count--;
-                if(arg->block_data[i]->owner_count == 0)
-                    free(arg->block_data[i]);
-            }
-        }
-        break;
-    }
-
-    SDL_DestroyMutex(task->mutex);
-    free(task->arg);
-    free(task);
-    return true;
-}
-
-static void world_check_tasks()
-{
-    if(world->tasks.size == 0) return;
-
-    for(u64 i = 0; i < world->tasks.size; i++){
-        ChunkThreadTask **task = array_list_offset(&world->tasks, i);
-        if(world_check_task(*task))
-            array_list_unordered_remove(&world->tasks, i, NULL);
-    }
-}
-
 void world_create(i32 size_x, i32 size_y, i32 size_z)
 {
     world = malloc(sizeof(World));
@@ -208,7 +119,6 @@ void world_create(i32 size_x, i32 size_y, i32 size_z)
 
     hashmap_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
     hashmap_create(&world->columns_in_generation, 1024, vec2i_hash, vec2i_cmp, 0.8f);
-    array_list_create(&world->tasks, sizeof(ChunkThreadTask*), 1024);
 
     world->chunks_size = (Vec3i){{size_x, size_y, size_z}};
     world->chunks = calloc(WORLD_VOLUME, sizeof(Chunk *));
@@ -223,20 +133,13 @@ void world_destroy()
         chunk_destroy(world->chunks[i]);
 
     free(world->chunks);
-    
-    hashmap_destroy(&world->columns_in_generation);
-
-    chunk_thread_pool_wait();
-
-    world_check_tasks();
-
-    array_list_destroy(&world->tasks);
 
     Chunk *chunk;
     hashmap_foreach_data(&world->inactive_chunks, chunk)
         chunk_destroy(chunk);
 
     hashmap_destroy(&world->inactive_chunks);
+    hashmap_destroy(&world->columns_in_generation);
 
     free(world);
 }
@@ -267,7 +170,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
 
                 u16 block_type = BLOCK_AIR;
 
-                f32 noise_3d = noise_3d_octave_perlin(&world->noise, &(Vec3){{block_pos.x/100.0f, y/400.0f, block_pos.y/100.0f}}, 3, 0.3);
+                f32 noise_3d = noise_3d_octave_perlin(&world->noise, &(Vec3){{block_pos.x/100.0f, y/800.0f, block_pos.y/100.0f}}, 3, 0.3);
                 if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
                     if(is_air_above)
                         block_type = BLOCK_GRASS;
@@ -289,15 +192,13 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
     return column;
 }
 
-
-
 void world_update()
 {
     Transform *transform = ecs_get_component(ecs->player_id, CMP_Transform);
 
     world_center_around_position(world, &transform->position);
 
-    world_check_tasks();
+    chunk_thread_pool_apply_results();
 }
 
 void world_render()
@@ -344,6 +245,19 @@ Chunk *world_get_chunk(const Vec3i *chunk_pos)
     Vec3i offset;
     zinc_vec3i_sub(chunk_pos, &world->origin, &offset);
     return world->chunks[world_offset_to_index(&offset)];
+}
+
+void world_make_neighbors_dirty(const Vec3i *chunk_pos)
+{
+    for(i32 i = 0; i < 6; i++){
+        Vec3i neighbor_pos;
+        direction_get_norm(i, &neighbor_pos);
+        zinc_vec3i_add(&neighbor_pos, chunk_pos, &neighbor_pos);
+
+        Chunk *neighbor = world_get_chunk(&neighbor_pos);
+        if(neighbor == NULL) continue;
+        neighbor->is_dirty = true;
+    }
 }
 
 void world_block_to_chunk_and_offset(const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset)
