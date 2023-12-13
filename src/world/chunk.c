@@ -2,6 +2,7 @@
 #include "../../include/world/world.h"
 #include "../../include/core/chunk_thread_pool.h"
 #include "../../include/world/block.h"
+#include "../../include/ECS/ecs.h"
 #include <SDL2/SDL.h>
 
 #define DATA_X_OFFSET 0u
@@ -24,7 +25,7 @@
 #define DATA_AMBIENT_OCCLUSION_OFFSET 29u
 #define DATA_AMBIENT_OCCLUSION_MASK 0x7u 
 
-i32 direction_offset[] = {
+const i32 direction_offset[] = {
     1, 0, 1,
     1, 0, 0,
     0, 0, 0,
@@ -33,7 +34,7 @@ i32 direction_offset[] = {
     1, 0, 0
 };
 
-i32 vertex_offsets[] = {
+const i32 vertex_offsets[] = {
     0, 0, 0,
     -1, 0, 0,
     -1, 1, 0,
@@ -65,18 +66,18 @@ i32 vertex_offsets[] = {
     0, 0, 1
 };
 
-u16 index_offset[] = {
+const u16 index_offset[] = {
     0, 1, 3, 1, 2, 3
 };
 
-u8 uv_offset[] = {
+const u8 uv_offset[] = {
     0, 16,
     16, 16,
     16, 0,
     0, 0
 };
 
-i32 neighbor_offset[] = {
+const i32 neighbor_offset[] = {
     1, 0, 1,
     1, -1, 1,
     0, -1, 1,
@@ -136,7 +137,8 @@ Shader *chunk_shader = NULL;
 GLuint chunk_shader_view_uni;
 GLuint chunk_shader_model_uni;
 GLuint chunk_shader_projection_uni; 
-GLuint chunk_shader_uv_offset_uni; 
+GLuint chunk_shader_uv_offset_uni;
+f32 chunk_bounding_radius;
 
 //u16 chunk_generate_block(Chunk *chunk, Vec3i *offset)
 //{
@@ -177,6 +179,13 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
     chunk->mesh_time = 0;
 
     zinc_vec3i_copy(pos, &chunk->position);
+
+    chunk->center = (Vec3) {{
+            CHUNK_SIZE * (chunk->position.x + 0.5f),
+            CHUNK_SIZE * (chunk->position.y + 0.5f),
+            CHUNK_SIZE * (chunk->position.z + 0.5f)
+        }};
+
     chunk->block_data = chunk_block_data_allocate();
 
     chunk->block_count = 0;
@@ -368,6 +377,7 @@ static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
     return arg;
 }
 
+
 void chunk_render(Chunk *chunk)
 {
     if(!chunk) return;
@@ -388,14 +398,50 @@ void chunk_render(Chunk *chunk)
 
     if(chunk->index_count == 0) return;
 
+    Transform *player_transform = ecs_get_component(ecs->player_id, CMP_Transform);
+    Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
+
+    Vec3 chunk_center;
+
+    zinc_vec3_sub(&chunk->center, &player_transform->position, &chunk_center);
+
+    f32 projection_on_z = zinc_vec3_dot(&player_transform->forward, &chunk_center);
+    if(projection_on_z + chunk_bounding_radius < camera->near ||
+       projection_on_z - chunk_bounding_radius > camera->far)
+        return;
+
+    f32 half_fov = camera->fov / 2.0f;
+    f32 tan_half_fov = tanf(half_fov);
+    f32 d = chunk_bounding_radius / cosf(half_fov);
+    f32 h = tan_half_fov * projection_on_z;
+
+    f32 projection_on_y = zinc_vec3_dot(&player_transform->up, &chunk_center);
+    if(projection_on_y < 0.0f)
+        projection_on_y *= -1;
+
+    if(projection_on_y > d + h)
+        return;
+
+    h *= camera->aspect_ratio;
+    d = chunk_bounding_radius / cosf(atanf(camera->aspect_ratio * tan_half_fov));
+    f32 projection_on_x = zinc_vec3_dot(&player_transform->right, &chunk_center);
+    if(projection_on_x < 0)
+        projection_on_x *= -1;
+
+    if(projection_on_x > d + h) return;
+
     glBindVertexArray(chunk->VAO);
 
-    Vec3 pos = {{chunk->position.x*CHUNK_SIZE, chunk->position.y*CHUNK_SIZE, chunk->position.z*CHUNK_SIZE}};
+    Vec3 pos = {{
+            chunk->position.x * CHUNK_SIZE,
+            chunk->position.y * CHUNK_SIZE,
+            chunk->position.z * CHUNK_SIZE
+        }};
 
     Mat4 model;
     zinc_translate(model, &pos);
 
-    glUniformMatrix4fv(chunk_shader_model_uni, 1, GL_TRUE, (GLfloat *)model);
+    glUniformMatrix4fv(chunk_shader_model_uni, 1, GL_TRUE, (GLfloat *) model);
 
     glDrawElements(GL_TRIANGLES, chunk->index_count, GL_UNSIGNED_SHORT, 0);
 }
