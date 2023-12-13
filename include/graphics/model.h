@@ -5,14 +5,14 @@
 #include "../data_structures/hash_map.h"
 
 typedef struct Face {
-	Direction cull_dir;
-	u8 positions[12];
-	u8 uvs[8];
+    Direction cull_dir;
+    u8 positions[12];
+    u8 uvs[8];
 } Face;
 
 typedef struct Model {
-	bool ambient_occlusion;
-	Face faces[6];
+    bool ambient_occlusion;
+    Face faces[6];
 } Model;
 
 //maps string path to model pointer

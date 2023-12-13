@@ -14,20 +14,20 @@
 #define CHUNK_COLUMN_HEIGHT 15
 
 typedef struct World {
-	Noise noise;
+    Noise noise;
 
-	// Near-bottom-left coordinate of active chunks
-	Vec3i origin;
+    // Near-bottom-left coordinate of active chunks
+    Vec3i origin;
 
-	// 3D array of active chunks
-	Chunk **chunks;
-	Vec3i chunks_size;
+    // 3D array of active chunks
+    Chunk **chunks;
+    Vec3i chunks_size;
 
-	// Stores vec2i positions of chunk columns that are in the process of generation
-	HashMap columns_in_generation;
+    // Stores vec2i positions of chunk columns that are in the process of generation
+    HashMap columns_in_generation;
 
-	// HashMap of chunks that are loaded but inactive
-	HashMap inactive_chunks;
+    // HashMap of chunks that are loaded but inactive
+    HashMap inactive_chunks;
 } World;
 
 extern World *world;
@@ -50,7 +50,12 @@ void world_make_neighbors_dirty(const Vec3i *chunk_pos);
 
 void world_block_to_chunk_and_offset(const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset);
 
-void world_cast_ray(const Vec3 *origin, const Vec3 *dir, f32 max_distance, Chunk **chunk, Vec3i *block_offset, Direction *facing_dir);
+void world_cast_ray(const Vec3 *origin,
+                    const Vec3 *dir,
+                    f32 max_distance,
+                    Chunk **chunk,
+                    Vec3i *block_offset,
+                    Direction *facing_dir);
 
 u32 world_offset_to_index(const Vec3i *offset);
 

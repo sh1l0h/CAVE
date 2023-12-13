@@ -164,6 +164,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
             f32 mountain_noise = noise_2d_octave_perlin(&world->noise, &(Vec2){{block_pos.x / 900.0f, block_pos.y / 900.0f}}, 3, 0.5f);	
 
             bool is_air_above = true;
+            u8 dirt_count = 3;
             for(i32 y = CHUNK_COLUMN_HEIGHT*CHUNK_SIZE - 1; y >= 0; y--){
                 Vec3i offset = {{x, y % CHUNK_SIZE, z}};
                 Chunk *chunk = column[y / CHUNK_SIZE];
@@ -174,6 +175,10 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
                 if(noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0){
                     if(is_air_above)
                         block_type = BLOCK_GRASS;
+                    else if(dirt_count > 0){
+                        block_type = BLOCK_DIRT;
+                        dirt_count--;
+                    }
                     else
                         block_type = BLOCK_STONE;
 
@@ -181,6 +186,7 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
                 }
                 else{
                     is_air_above = true;
+                    dirt_count = 3;
                 }
                 
                 chunk->block_data->data[CHUNK_OFFSET_2_INDEX(offset)] = block_type;

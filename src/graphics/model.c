@@ -1,6 +1,6 @@
 #include "../../include/graphics/model.h"
 #include "../../include/core/log.h"
-#include "../../include/core/cJSON.h"
+#include "../../lib/cJSON/cJSON.h"
 #include <dirent.h>
 
 HashMap models;

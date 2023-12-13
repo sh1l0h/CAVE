@@ -5,9 +5,9 @@
 #include <GL/glew.h>
 
 typedef struct Shader {
-	GLuint program;
-	GLuint frag_shader;
-	GLuint vert_shader;
+    GLuint program;
+    GLuint frag_shader;
+    GLuint vert_shader;
 } Shader;
 
 i32 shader_create(Shader *shader, const char *vert_shader_path, const char *frag_shader_path);

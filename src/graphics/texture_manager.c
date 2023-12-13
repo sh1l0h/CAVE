@@ -50,6 +50,8 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
     GLint index = 0;
     struct dirent *curr;
     while((curr = readdir(texture_dir)) != NULL){
+        if(curr->d_name[0] == '.') continue;
+
         u64 file_name_len = strlen(curr->d_name);
         if(file_name_len < 4 || strcmp(".png", &curr->d_name[file_name_len - 4]) != 0){
             log_warn("Ignoring file \"%s\" in \"%s\" directory. Texture files must have a \".png\" extension.",
@@ -80,7 +82,6 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
         record->index = index++;
 
         hashmap_add(&texture_manager.texture_records, record->texture_name, record);
-
     }
     closedir(texture_dir);
 

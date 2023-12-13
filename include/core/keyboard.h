@@ -9,22 +9,22 @@
 // When adding a new key,
 // don't forget to add its name to key_names array in keyboard_init function!
 typedef enum Key {
-	KEY_MOVE_FORWARD = 0,
-	KEY_MOVE_BACKWARD,
-	KEY_MOVE_LEFT,
-	KEY_MOVE_RIGHT,
-	KEY_FLY_UP,
-	KEY_FLY_DOWN,
-	KEY_ACCELERATE,
-	KEY_SHOW_GIZMOS,
+    KEY_MOVE_FORWARD = 0,
+    KEY_MOVE_BACKWARD,
+    KEY_MOVE_LEFT,
+    KEY_MOVE_RIGHT,
+    KEY_FLY_UP,
+    KEY_FLY_DOWN,
+    KEY_ACCELERATE,
+    KEY_SHOW_GIZMOS,
 
-	KEY_COUNT // Always keep this as the last entry
+    KEY_COUNT // Always keep this as the last entry
 }  Key;
 
 typedef struct Keyboard {
-	SDL_Scancode bindings[KEY_COUNT];
-	bool current[KEY_COUNT];
-	bool previous[KEY_COUNT];
+    SDL_Scancode bindings[KEY_COUNT];
+    bool current[KEY_COUNT];
+    bool previous[KEY_COUNT];
 } Keyboard;
 
 i32 keyboard_init();

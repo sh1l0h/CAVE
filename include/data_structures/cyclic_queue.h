@@ -4,14 +4,14 @@
 #include "../util.h"
 
 typedef struct CyclicQueue {
-	u8 *data;
+    u8 *data;
 
-	u64 start;
-	u64 end;
-	u64 allocated_elements;
+    u64 start;
+    u64 end;
+    u64 allocated_elements;
 
-	u32 element_size;
-	u64 size;
+    u32 element_size;
+    u64 size;
 } CyclicQueue;
 
 void cyclic_queue_create(CyclicQueue *queue, u32 element_size, u64 initial_size);

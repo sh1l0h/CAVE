@@ -6,12 +6,12 @@
 #include <GL/gl.h>
 
 typedef struct BlockMarker {
-	Vec4 color;
+    Vec4 color;
 
-	GLuint model_uniform, view_uniform, projection_uniform;
-	GLuint color_uniform, direction_uniform;
-	GLuint VAO;
-	GLuint VBO, IBO;
+    GLuint model_uniform, view_uniform, projection_uniform;
+    GLuint color_uniform, direction_uniform;
+    GLuint VAO;
+    GLuint VBO, IBO;
 } BlockMarker;
 
 void bm_create(BlockMarker *bm, Vec4 *color);

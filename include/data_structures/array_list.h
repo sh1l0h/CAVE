@@ -4,11 +4,11 @@
 #include "../util.h"
 
 typedef struct ArrayList {
-	u8 *data;
-	u64 allocated_bytes;
+    u8 *data;
+    u64 allocated_bytes;
 
-	u32 element_size;
-	u64 size;
+    u32 element_size;
+    u64 size;
 } ArrayList;
 
 void array_list_create(ArrayList *list, u32 element_size, u64 initial_size);

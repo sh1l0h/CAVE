@@ -5,17 +5,17 @@
 #include <SDL2/SDL.h>
 
 typedef enum MouseButton {
-	MOUSE_LEFT		= SDL_BUTTON_LEFT,
-	MOUSE_MIDDLE	= SDL_BUTTON_MIDDLE,
-	MOUSE_RIGHT		= SDL_BUTTON_RIGHT
+    MOUSE_LEFT		= SDL_BUTTON_LEFT,
+    MOUSE_MIDDLE	= SDL_BUTTON_MIDDLE,
+    MOUSE_RIGHT		= SDL_BUTTON_RIGHT
 } MouseButton;
 
 typedef struct Mouse {
-	Vec2i position;
-	Vec2i relative_position;
-	
-	u32 current_state;
-	u32 previous_state;
+    Vec2i position;
+    Vec2i relative_position;
+    
+    u32 current_state;
+    u32 previous_state;
 } Mouse; 
 
 extern Mouse mouse;

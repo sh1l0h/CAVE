@@ -6,21 +6,21 @@
 #include <GL/glew.h>
 
 typedef enum TextureType {
-	TEXTURE_TYPE_BLOCK = 0,
-	
-	TEXTURE_TYPE_COUNT // Always keep this as the last entry
+    TEXTURE_TYPE_BLOCK = 0,
+    
+    TEXTURE_TYPE_COUNT // Always keep this as the last entry
 } TextureType;
 
 struct TextureRecord {
-	GLint index;
-	char texture_name[];
+    GLint index;
+    char texture_name[];
 };
 
 typedef struct TextureManager {
-	// Maps texture name to its texture record
-	HashMap texture_records;
-	
-	GLuint texture_arrays[TEXTURE_TYPE_COUNT];
+    // Maps texture name to its texture record
+    HashMap texture_records;
+    
+    GLuint texture_arrays[TEXTURE_TYPE_COUNT];
 } TextureManager;
 
 extern TextureManager texture_manager;

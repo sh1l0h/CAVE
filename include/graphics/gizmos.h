@@ -5,15 +5,15 @@
 #include "./shader.h"
 
 typedef struct Gizmos {
-	Vec4 color;
+    Vec4 color;
 
-	Shader shader;
+    Shader shader;
 
-	GLuint model_uniform, view_uniform, projection_uniform;
-	GLuint color_uniform;
+    GLuint model_uniform, view_uniform, projection_uniform;
+    GLuint color_uniform;
 
-	GLuint VAO;
-	GLuint cube_vbo, cube_ibo;
+    GLuint VAO;
+    GLuint cube_vbo, cube_ibo;
 } Gizmos;
 
 void gizmos_init();

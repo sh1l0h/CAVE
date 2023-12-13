@@ -4,8 +4,8 @@
 #include "../util.h"
 
 typedef struct Noise {
-	u32 seed;
-	i32 p[512];
+    u32 seed;
+    i32 p[512];
 } Noise;
 
 void noise_create(Noise *noise, u32 seed);

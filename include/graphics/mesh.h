@@ -4,10 +4,10 @@
 #include "./mesh_buffer.h"
 
 typedef struct Mesh {
-	MeshBuffer vert_buffer;
-	MeshBuffer index_buffer;
-	u32 vert_count;
-	u32 index_count;
+    MeshBuffer vert_buffer;
+    MeshBuffer index_buffer;
+    u32 vert_count;
+    u32 index_count;
 } Mesh;
 
 void mesh_create(Mesh *mesh);

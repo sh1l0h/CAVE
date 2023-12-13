@@ -4,13 +4,13 @@
 #include "../util.h"
 
 struct LinkedListNode {
-	void *data;
-	struct LinkedListNode *next;
+    void *data;
+    struct LinkedListNode *next;
 };
 
 typedef struct LinkedList {
-	struct LinkedListNode *head, *tail;
-	u32 size;
+    struct LinkedListNode *head, *tail;
+    u32 size;
 } LinkedList;
 
 void linked_list_create(LinkedList *list);

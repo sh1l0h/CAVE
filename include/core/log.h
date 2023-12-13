@@ -7,11 +7,11 @@
 #include <time.h>
 
 enum LogType {
-	LOG_INFO,
-	LOG_DEBUG,
-	LOG_WARN,
-	LOG_ERROR,
-	LOG_FATAL
+    LOG_INFO,
+    LOG_DEBUG,
+    LOG_WARN,
+    LOG_ERROR,
+    LOG_FATAL
 };
 
 void log_create();

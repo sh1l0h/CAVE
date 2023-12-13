@@ -4,11 +4,11 @@
 #include "../util.h"
 
 typedef struct MeshBuffer {
-	void *data;
-	u32 allocated_bytes;
+    void *data;
+    u32 allocated_bytes;
 
-	//in bytes
-	u32 index;
+    //in bytes
+    u32 index;
 } MeshBuffer;
 
 void mesh_buffer_create(MeshBuffer *mb, u32 initial_size);

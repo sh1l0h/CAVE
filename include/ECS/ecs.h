@@ -8,57 +8,57 @@
 #include "../util.h"
 
 typedef struct ArchetypeType {
-	ComponentID *ids;
-	u64 size;
+    ComponentID *ids;
+    u64 size;
 } ArchetypeType;
 
 typedef struct Archetype {
-	u64 id;
-	ArchetypeType type;
+    u64 id;
+    ArchetypeType type;
 
-	// Stores entity IDs:
-	// All the components in the i-th column in 'components' array belong to the entity with the i-th ID stored here.
-	ArrayList entities;
+    // Stores entity IDs:
+    // All the components in the i-th column in 'components' array belong to the entity with the i-th ID stored here.
+    ArrayList entities;
 
-	// Components stored in 2D array: A row represents a component;
-	// A column represents all the components of an entity;
-	ArrayList *components;
+    // Components stored in 2D array: A row represents a component;
+    // A column represents all the components of an entity;
+    ArrayList *components;
 
-	// Maps component IDs to archetype edges for efficient component lookup.
-	HashMap edges;
+    // Maps component IDs to archetype edges for efficient component lookup.
+    HashMap edges;
 } Archetype;
 
 struct ArchetypeEdge {
-	ComponentID component_id;
-	Archetype *add;
-	Archetype *remove;
+    ComponentID component_id;
+    Archetype *add;
+    Archetype *remove;
 };
 
 typedef struct ArchetypeRecord {
-	Archetype *archetype;
-	u64 index;
+    Archetype *archetype;
+    u64 index;
 } ArchetypeRecord;
 
 typedef struct ECS {
-	u64 player_id;
+    u64 player_id;
 
     // Maps entity IDs to their archetype records
-	// where index is a column index in the 'components' array 
-	ArrayList entities;
+    // where index is a column index in the 'components' array 
+    ArrayList entities;
 
     // Stores free entity IDs for reuse
-	CyclicQueue free_entities;
+    CyclicQueue free_entities;
 
-	// Maps sorted list of component IDs to archetypes
-	HashMap archetypes;
+    // Maps sorted list of component IDs to archetypes
+    HashMap archetypes;
 
-	// Each hash map maps archetype IDs to archetype records,
-	// where index is a row in the 'components' array;
-	// Each hash map contains all the archetypes storing the corresponding component
-	HashMap archetype_component_table[CMP_COUNT];
+    // Each hash map maps archetype IDs to archetype records,
+    // where index is a row in the 'components' array;
+    // Each hash map contains all the archetypes storing the corresponding component
+    HashMap archetype_component_table[CMP_COUNT];
 
-	// Represents the root archetype with no components.
-	Archetype root_archetype;
+    // Represents the root archetype with no components.
+    Archetype root_archetype;
 } ECS;
 
 extern ECS *ecs;
