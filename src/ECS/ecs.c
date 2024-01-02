@@ -46,6 +46,9 @@ void ecs_init()
 
 void ecs_deinit()
 {
+    if(ecs == NULL)
+        return;
+
     array_list_destroy(&ecs->entities);
     cyclic_queue_destroy(&ecs->free_entities);
 

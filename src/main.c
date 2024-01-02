@@ -17,7 +17,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
 
-#define UPDATES_PER_SECOND 20
+#define UPDATES_PER_SECOND 120
 
 int main()
 {
@@ -66,7 +66,7 @@ int main()
         goto End;
     }
 
-    SDL_GL_SetSwapInterval(0);
+    // SDL_GL_SetSwapInterval(0);
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
@@ -119,7 +119,11 @@ int main()
     collider->half_size = (Vec3){{0.4f, 0.9f, 0.4f}};
     collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
 
-    world_create(24, 20, 24);
+    RigidBody *rigidbody = ecs_get_component(ecs->player_id, CMP_RigidBody);
+    rigidbody->velocity = (Vec3) ZINC_VEC3_ZERO;
+    rigidbody->gravity = true;
+
+    world_create(64, 20, 64);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
@@ -184,7 +188,7 @@ int main()
             f32 dt = 1.0f / UPDATES_PER_SECOND;
 
             transform_update_all();
-            //rigidbody_update_all(dt);
+            rigidbody_update_all(dt);
             player_update_movement_all(dt);
             camera_update_all();
             world_update(world);
@@ -198,7 +202,7 @@ int main()
         frame_count++;
 
         if(second_count >= 1000){
-            log_info("FPS: %f", frame_count*1000.0f/second_count);
+            log_info("FPS: %f", frame_count * 1000.0f / second_count);
             second_count = 0;
             frame_count = 0;
         }
@@ -212,11 +216,9 @@ int main()
 
  End:
 
-    if(ecs != NULL)
-        ecs_deinit();
+    ecs_deinit();
 
-    if(world != NULL)
-        world_destroy();
+    world_destroy();
 
     if(chunk_thread_pool != NULL){
         chunk_thread_pool_wait();
@@ -224,13 +226,19 @@ int main()
         chunk_thread_pool_deinit();
     }
 
+    texture_manager_deinit();
+
     if(chunk_shader != NULL){
         shader_destroy(chunk_shader);
         free(chunk_shader);
     }
 
-    if(context != NULL) SDL_GL_DeleteContext(context);
-    if(window != NULL) SDL_DestroyWindow(window);
+    if(context != NULL)
+        SDL_GL_DeleteContext(context);
+
+    if(window != NULL)
+        SDL_DestroyWindow(window);
+
     SDL_Quit();
 
     return 0;

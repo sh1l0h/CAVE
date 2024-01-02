@@ -6,7 +6,6 @@
 
 World *world = NULL;
 
-
 static f32 height_spline(f32 x)
 {
     if(x <= -0.8) return 96.0f;
@@ -106,7 +105,7 @@ static void world_center_around_position(World *world, Vec3 *pos)
 
 static f32 dencity_bias(f32 height, f32 base)
 {
-    return 1.0f*(base - height)/height;
+    return 2.0f*(base - height)/height;
 }
 
 void world_create(i32 size_x, i32 size_y, i32 size_z)
@@ -127,6 +126,9 @@ void world_create(i32 size_x, i32 size_y, i32 size_z)
 
 void world_destroy()
 {
+    if(world == NULL)
+        return;
+
     // TODO: Save chunks
 
     for(i32 i = 0; i < WORLD_VOLUME; i++)

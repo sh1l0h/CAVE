@@ -23,7 +23,7 @@ typedef struct TextureManager {
     GLuint texture_arrays[TEXTURE_TYPE_COUNT];
 } TextureManager;
 
-extern TextureManager texture_manager;
+extern TextureManager *texture_manager;
 
 void texture_manager_init();
 void texture_manager_deinit();

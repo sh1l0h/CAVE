@@ -10,7 +10,7 @@
 #define BLOCK_TEXTUER_WIDTH 16
 #define BLOCK_TEXTUER_HEIGHT 16
 
-TextureManager texture_manager;
+TextureManager *texture_manager = NULL;
 
 static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
                                                   TextureType type,
@@ -26,8 +26,8 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
     }
     u64 texture_dir_path_len = strlen(texture_dir_path);
 
-    glGenTextures(1, &texture_manager.texture_arrays[type]);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, texture_manager.texture_arrays[type]);
+    glGenTextures(1, &texture_manager->texture_arrays[type]);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, texture_manager->texture_arrays[type]);
 
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -81,7 +81,7 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
         memcpy(record->texture_name, curr->d_name, sizeof(char) * (file_name_len + 1));
         record->index = index++;
 
-        hashmap_add(&texture_manager.texture_records, record->texture_name, record);
+        hashmap_add(&texture_manager->texture_records, record->texture_name, record);
     }
     closedir(texture_dir);
 
@@ -93,7 +93,9 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
 
 void texture_manager_init()
 {
-    hashmap_create(&texture_manager.texture_records, 32, string_hash, string_cmp, 0.8f);
+    texture_manager = malloc(sizeof(TextureManager));
+
+    hashmap_create(&texture_manager->texture_records, 32, string_hash, string_cmp, 0.8f);
 
     texture_manager_load_textures_from_dir(BLOCK_TEXTURE_DIR,
                                            TEXTURE_TYPE_BLOCK,
@@ -104,20 +106,25 @@ void texture_manager_init()
 
 void texture_manager_deinit()
 {
+    if(texture_manager == NULL)
+        return;
+
     struct TextureRecord *record;
-    hashmap_foreach_data(&texture_manager.texture_records, record)
+    hashmap_foreach_data(&texture_manager->texture_records, record)
         free(record);
 
-    hashmap_destroy(&texture_manager.texture_records);
+    hashmap_destroy(&texture_manager->texture_records);
+
+    free(texture_manager);
 }
 
 void texture_manager_bind(TextureType type)
 {
-    glBindTexture(GL_TEXTURE_2D_ARRAY, texture_manager.texture_arrays[type]);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, texture_manager->texture_arrays[type]);
 }
 
 GLint texture_manager_get_index(const char *texture_name)
 {
-    struct TextureRecord *record = hashmap_get(&texture_manager.texture_records, texture_name);
+    struct TextureRecord *record = hashmap_get(&texture_manager->texture_records, texture_name);
     return record->index;
 }

@@ -19,4 +19,8 @@
             (pos).y < 0 ? ((pos).y - CHUNK_SIZE + 1) / CHUNK_SIZE : (pos).y / CHUNK_SIZE, \
             (pos).z < 0 ? ((pos).z - CHUNK_SIZE + 1) / CHUNK_SIZE : (pos).z / CHUNK_SIZE}}
 
+#define MIN(a, b) ((a) <= (b) ? (a) : (b))
+#define MAX(a, b) ((a) >= (b) ? (a) : (b))
+#define CLAMP(v, min, max) MAX(min, MIN(max, v))
+
 #endif

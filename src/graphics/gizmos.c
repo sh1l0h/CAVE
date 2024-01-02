@@ -100,24 +100,6 @@ void gizmos_draw()
             zinc_vec3_add(&transform->position, &collider->offset, &collider_center);
             gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
             gizmos_draw_cube(&collider_center, &collider->half_size);
-
-            Vec3 border_min;
-            zinc_vec3_sub(&collider_center, &collider->half_size, &border_min);
-            Vec3 border_max;
-            zinc_vec3_add(&collider_center, &collider->half_size, &border_max);
-
-            gizmos_set_color(1.0f, 1.0f, 1.0f, 1.0f);
-            Vec3i border_block_min = (Vec3i) POS_2_BLOCK(border_min);
-            Vec3i border_block_max = (Vec3i) POS_2_BLOCK(border_max);
-            for(i32 z = border_block_min.z; z <= border_block_max.z; z++){
-                for(i32 x = border_block_min.x; x <= border_block_max.x; x++){
-                    for(i32 y = border_block_min.y; y <= border_block_max.y; y++){
-                        Vec3 pos = {{x + 0.5f, y+ 0.5f, z + 0.5f}};
-                        gizmos_draw_cube(&pos,&(Vec3){{0.5f, 0.5f, 0.5f}});
-                    }
-                }
-            }
-
         }
     }
 }
