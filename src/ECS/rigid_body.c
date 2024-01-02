@@ -43,29 +43,29 @@ static void rigidbody_check_collision(Transform *transform,
                 
 
             }
-            }
         }
+    }
 
-    break_loop:
-        if(!collides){
-            zinc_vec3_add(&transform->position, vel, &transform->position);
+ break_loop:
+    if(!collides){
+        zinc_vec3_add(&transform->position, vel, &transform->position);
 
-            if(vel->y != 0.0f)
-                rb->on_ground = false;
+        if(vel->y != 0.0f)
+            rb->on_ground = false;
 
-            return;
-        }
+        return;
+    }
 
-        if(vel->x != 0.0f){
-            rb->velocity.x = 0.0f;
-        }
-        else if(vel->y != 0.0f){
-            rb->velocity.y = 0.0f;
-            rb->on_ground = true;
-        }
-        else if(vel->z != 0.0f){
-            rb->velocity.z = 0.0f;
-        }
+    if(vel->x != 0.0f){
+        rb->velocity.x = 0.0f;
+    }
+    else if(vel->y != 0.0f){
+        rb->velocity.y = 0.0f;
+        rb->on_ground = true;
+    }
+    else if(vel->z != 0.0f){
+        rb->velocity.z = 0.0f;
+    }
 }
 
 void rigidbody_update_all(f32 dt)
