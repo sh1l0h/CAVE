@@ -7,66 +7,6 @@
 #define PLAYER_INPUT_GRAVITY 8.0f
 #define PLAYER_INPUT_SENSITIVITY 4.0f
 
-static void player_update_mouse(Transform *transform)
-{
-    zinc_vec3_add(&transform->rotation, &(Vec3){{mouse.relative_position.y/500.0f, mouse.relative_position.x/500.0f, 0.0f}}, &transform->rotation);
-
-    if(transform->rotation.x > ZINC_PI_OVER_2 - 0.01f)
-        transform->rotation.x = ZINC_PI_OVER_2 - 0.01f;
-    else if(transform->rotation.x < -ZINC_PI_OVER_2 + 0.01f)
-        transform->rotation.x = -ZINC_PI_OVER_2 + 0.01f;
-}
-
-static void player_update_movement(Player *player, Transform *transform, f32 dt)
-{
-    player->chunk_pos = (Vec3i)POS_2_CHUNK((transform->position));
-
-    f32 speed = 10.0f * dt;
-    Vec3 vel = ZINC_VEC3_ZERO;
-    Vec3 forward;
-    zinc_vec3_copy(&transform->forward, &forward);
-    forward.y = 0;
-    zinc_vec3_normalize(&forward);
-
-    Vec3 up = {{0.0f, 1.0f, 0.0f}};
-
-    Vec3 right;
-    zinc_vec3_copy(&transform->right, &right);
-
-    if(keyboard_is_key_pressed(KEY_ACCELERATE)) speed *= 2;
-
-    Vec3 tmp;
-
-    if(keyboard_is_key_pressed(KEY_MOVE_FORWARD)){
-        zinc_vec3_scale(&forward, speed, &tmp);
-        zinc_vec3_add(&vel, &tmp, &vel);
-    }
-    if(keyboard_is_key_pressed(KEY_MOVE_BACKWARD)){
-        zinc_vec3_scale(&forward, -speed, &tmp);
-        zinc_vec3_add(&vel, &tmp, &vel);
-    }
-
-    if(keyboard_is_key_pressed(KEY_FLY_UP)){
-        zinc_vec3_scale(&up, speed, &tmp);
-        zinc_vec3_add(&vel, &tmp, &vel);
-    }
-    if(keyboard_is_key_pressed(KEY_FLY_DOWN)){
-        zinc_vec3_scale(&up, -speed, &tmp);
-        zinc_vec3_add(&vel, &tmp, &vel);
-    }
-
-    if(keyboard_is_key_pressed(KEY_MOVE_RIGHT)){
-        zinc_vec3_scale(&right, speed, &tmp);
-        zinc_vec3_add(&vel, &tmp, &vel);
-    }
-    if(keyboard_is_key_pressed(KEY_MOVE_LEFT)){
-        zinc_vec3_scale(&right, -speed, &tmp);
-        zinc_vec3_add(&vel, &tmp, &vel);
-    }
-
-    zinc_vec3_add(&vel, &transform->position, &transform->position);
-}
-
 /*
   static void player_place_block(Player *player)
   {
@@ -103,8 +43,15 @@ void player_update_mouse_all()
         if(transform_record == NULL) continue;
 
         Archetype *archetype = transform_record->archetype;
-        for(u64 j = 0; j < archetype->entities.size; j++){
-            player_update_mouse(array_list_offset(&archetype->components[transform_record->index], j));
+        for(u64 i = 0; i < archetype->entities.size; i++){
+            Transform *transform = array_list_offset(&archetype->components[transform_record->index], i);
+
+            zinc_vec3_add(&transform->rotation, &(Vec3){{mouse.relative_position.y/500.0f, mouse.relative_position.x/500.0f, 0.0f}}, &transform->rotation);
+
+            if(transform->rotation.x > ZINC_PI_OVER_2 - 0.01f)
+                transform->rotation.x = ZINC_PI_OVER_2 - 0.01f;
+            else if(transform->rotation.x < -ZINC_PI_OVER_2 + 0.01f)
+                transform->rotation.x = -ZINC_PI_OVER_2 + 0.01f;
         }
     }
 }
@@ -157,7 +104,6 @@ void player_update_movement_all(f32 dt)
                 player->input_velocity.x = MIN(player->input_velocity.x + PLAYER_INPUT_GRAVITY * dt, 0.0f);
             }
 
-
             Vec3 forward_vel;
             zinc_vec3_copy(&transform->forward, &forward_vel);
             forward_vel.y = 0;
@@ -167,10 +113,7 @@ void player_update_movement_all(f32 dt)
             Vec3 right_vel;
             zinc_vec3_scale(&transform->right, player->input_velocity.x, &right_vel);
             zinc_vec3_add(&right_vel, &forward_vel, &forward_vel);
-            
-            if(forward_vel.x != 0.0f || forward_vel.y != 0.0f || forward_vel.z != 0.0)
-                zinc_vec3_normalize(&forward_vel);
-
+            zinc_vec3_normalize(&forward_vel);
             zinc_vec3_scale(&forward_vel,
                             keyboard_is_key_pressed(KEY_ACCELERATE) ? PLAYER_MAX_RUNNING_SPEED : PLAYER_MAX_WALKING_SPEED,
                             &forward_vel);
