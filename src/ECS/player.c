@@ -2,10 +2,10 @@
 #include "../../include/core/mouse.h"
 #include "../../include/core/keyboard.h"
 
-#define PLAYER_MAX_WALKING_SPEED 4.4f
-#define PLAYER_MAX_RUNNING_SPEED 5.6f
-#define PLAYER_INPUT_GRAVITY 8.0f
-#define PLAYER_INPUT_SENSITIVITY 4.0f
+#define PLAYER_WALKING_ACCELARATION 60.0f
+#define PLAYER_RUNNING_ACCELETATION 75.0f
+#define PLAYER_DRAG_ON_GROUND 15.0f
+#define PLAYER_DRAG_IN_AIR 14.7f
 
 /*
   static void player_place_block(Player *player)
@@ -74,47 +74,50 @@ void player_update_movement_all(f32 dt)
         for(u64 i = 0; i < archetype->entities.size; i++){
             Transform *transform = array_list_offset(&archetype->components[transform_record->index], i);
             RigidBody *rb = array_list_offset(&archetype->components[rb_record->index], i);
-            Player *player = array_list_offset(&archetype->components[player_record->index], i);
+            //Player *player = array_list_offset(&archetype->components[player_record->index], i);
+
+            Vec3 temp;
+            zinc_vec3_copy(&transform->forward, &temp);
+            temp.y = 0;
+            zinc_vec3_normalize(&temp);
 
             Vec3 acc = (Vec3) ZINC_VEC3_ZERO;
             if(keyboard_is_key_pressed(KEY_MOVE_FORWARD))
-                acc.z = 1.0f;
+                zinc_vec3_add(&acc, &temp, &acc);
 
-            if(keyboard_is_key_pressed(KEY_MOVE_BACKWARD))
-                acc.z = -1.0f;
+            if(keyboard_is_key_pressed(KEY_MOVE_BACKWARD)){
+                zinc_vec3_scale(&temp, -1.0f, &temp);
+                zinc_vec3_add(&acc, &temp, &acc);
+            }
 
             if(keyboard_is_key_pressed(KEY_MOVE_RIGHT))
-                acc.x = 1.0f;
+                zinc_vec3_add(&transform->right, &acc, &acc);
 
-            if(keyboard_is_key_pressed(KEY_MOVE_LEFT))
-                acc.x = -1.0f;
+            if(keyboard_is_key_pressed(KEY_MOVE_LEFT)){
+                zinc_vec3_scale(&transform->right, -1.0f, &temp);
+                zinc_vec3_add(&temp, &acc, &acc);
+            }
 
             zinc_vec3_normalize(&acc);
-            zinc_vec3_scale(&acc, keyboard_is_key_pressed(KEY_ACCELERATE) ? 75.0f : 60.0f, &acc);
+            zinc_vec3_scale(&acc,
+                            keyboard_is_key_pressed(KEY_ACCELERATE) ? PLAYER_RUNNING_ACCELETATION : PLAYER_WALKING_ACCELARATION,
+                            &acc);
 
-            Vec3 temp;
+            Vec3 horizontal_vel = {{
+                    rb->velocity.x,
+                    0.0f,
+                    rb->velocity.z
+                }};
 
-            zinc_vec3_scale(&player->player_velocity, rb->on_ground ? 15.0f : 14.7f, &temp);
-            zinc_vec3_sub(&acc, &temp, &temp);
-            zinc_vec3_scale(&temp, dt, &temp);
-            zinc_vec3_add(&temp, &player->player_velocity, &player->player_velocity);
+            zinc_vec3_scale(&horizontal_vel,
+                            rb->on_ground ? PLAYER_DRAG_ON_GROUND : PLAYER_DRAG_IN_AIR,
+                            &horizontal_vel);
+            zinc_vec3_sub(&acc, &horizontal_vel, &horizontal_vel);
+            zinc_vec3_scale(&horizontal_vel, dt, &horizontal_vel);
 
-            zinc_vec3_print(&player->player_velocity);
-            Vec3 forward_vel;
-            zinc_vec3_copy(&transform->forward, &forward_vel);
-            forward_vel.y = 0;
-            zinc_vec3_normalize(&forward_vel);
+            zinc_vec3_add(&horizontal_vel, &rb->velocity, &rb->velocity);
 
-            zinc_vec3_scale(&forward_vel, player->player_velocity.z, &forward_vel);
-
-            Vec3 right_vel;
-            zinc_vec3_scale(&transform->right, player->player_velocity.x, &right_vel);
-            zinc_vec3_add(&right_vel, &forward_vel, &forward_vel);
-            //keyboard_is_key_pressed(KEY_ACCELERATE) ? PLAYER_MAX_RUNNING_SPEED : PLAYER_MAX_WALKING_SPEED,
-            //&forward_vel);
-
-            bool jump = keyboard_is_key_pressed(KEY_FLY_UP) && rb->on_ground;
-            rb->velocity = (Vec3) {{forward_vel.x, jump ? 10.0f : rb->velocity.y, forward_vel.z}};
+            rb->velocity.y = keyboard_is_key_pressed(KEY_FLY_UP) && rb->on_ground ? 10.0f : rb->velocity.y;
         }
     }
 
