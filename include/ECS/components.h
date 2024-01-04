@@ -42,6 +42,7 @@ typedef struct Camera {
 
 typedef struct Player {
     Vec3 input_velocity;
+    Vec3 player_velocity;
 
     Vec3i chunk_pos;
     Chunk *selected_block_chunk;

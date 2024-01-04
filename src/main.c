@@ -123,7 +123,7 @@ int main()
     rigidbody->velocity = (Vec3) ZINC_VEC3_ZERO;
     rigidbody->gravity = true;
 
-    world_create(64, 20, 64);
+    world_create(32, 20, 32);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 

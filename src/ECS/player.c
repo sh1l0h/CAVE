@@ -76,47 +76,42 @@ void player_update_movement_all(f32 dt)
             RigidBody *rb = array_list_offset(&archetype->components[rb_record->index], i);
             Player *player = array_list_offset(&archetype->components[player_record->index], i);
 
-            if(keyboard_is_key_pressed(KEY_MOVE_FORWARD)){
-                player->input_velocity.z = CLAMP(player->input_velocity.z + PLAYER_INPUT_SENSITIVITY * dt, -1.0f, 1.0f);
-            }
-            else if(player->input_velocity.z > 0){
-                player->input_velocity.z = MAX(player->input_velocity.z - PLAYER_INPUT_GRAVITY * dt, 0.0f);
-            }
+            Vec3 acc = (Vec3) ZINC_VEC3_ZERO;
+            if(keyboard_is_key_pressed(KEY_MOVE_FORWARD))
+                acc.z = 1.0f;
 
-            if(keyboard_is_key_pressed(KEY_MOVE_BACKWARD)){
-                player->input_velocity.z = CLAMP(player->input_velocity.z - PLAYER_INPUT_SENSITIVITY * dt, -1.0f, 1.0f);
-            }
-            else if(player->input_velocity.z < 0){
-                player->input_velocity.z = MIN(player->input_velocity.z + PLAYER_INPUT_GRAVITY * dt, 0.0f);
-            }
+            if(keyboard_is_key_pressed(KEY_MOVE_BACKWARD))
+                acc.z = -1.0f;
 
-            if(keyboard_is_key_pressed(KEY_MOVE_RIGHT)){
-                player->input_velocity.x = CLAMP(player->input_velocity.x + PLAYER_INPUT_SENSITIVITY * dt, -1.0f, 1.0f);
-            }
-            else if(player->input_velocity.x > 0){
-                player->input_velocity.x = MAX(player->input_velocity.x - PLAYER_INPUT_GRAVITY * dt, 0.0f);
-            }
+            if(keyboard_is_key_pressed(KEY_MOVE_RIGHT))
+                acc.x = 1.0f;
 
-            if(keyboard_is_key_pressed(KEY_MOVE_LEFT)){
-                player->input_velocity.x = CLAMP(player->input_velocity.x - PLAYER_INPUT_SENSITIVITY * dt, -1.0f, 1.0f);
-            }
-            else if(player->input_velocity.x < 0){
-                player->input_velocity.x = MIN(player->input_velocity.x + PLAYER_INPUT_GRAVITY * dt, 0.0f);
-            }
+            if(keyboard_is_key_pressed(KEY_MOVE_LEFT))
+                acc.x = -1.0f;
 
+            zinc_vec3_normalize(&acc);
+            zinc_vec3_scale(&acc, keyboard_is_key_pressed(KEY_ACCELERATE) ? 75.0f : 60.0f, &acc);
+
+            Vec3 temp;
+
+            zinc_vec3_scale(&player->player_velocity, rb->on_ground ? 15.0f : 14.7f, &temp);
+            zinc_vec3_sub(&acc, &temp, &temp);
+            zinc_vec3_scale(&temp, dt, &temp);
+            zinc_vec3_add(&temp, &player->player_velocity, &player->player_velocity);
+
+            zinc_vec3_print(&player->player_velocity);
             Vec3 forward_vel;
             zinc_vec3_copy(&transform->forward, &forward_vel);
             forward_vel.y = 0;
             zinc_vec3_normalize(&forward_vel);
-            zinc_vec3_scale(&forward_vel, player->input_velocity.z, &forward_vel);
+
+            zinc_vec3_scale(&forward_vel, player->player_velocity.z, &forward_vel);
 
             Vec3 right_vel;
-            zinc_vec3_scale(&transform->right, player->input_velocity.x, &right_vel);
+            zinc_vec3_scale(&transform->right, player->player_velocity.x, &right_vel);
             zinc_vec3_add(&right_vel, &forward_vel, &forward_vel);
-            zinc_vec3_normalize(&forward_vel);
-            zinc_vec3_scale(&forward_vel,
-                            keyboard_is_key_pressed(KEY_ACCELERATE) ? PLAYER_MAX_RUNNING_SPEED : PLAYER_MAX_WALKING_SPEED,
-                            &forward_vel);
+            //keyboard_is_key_pressed(KEY_ACCELERATE) ? PLAYER_MAX_RUNNING_SPEED : PLAYER_MAX_WALKING_SPEED,
+            //&forward_vel);
 
             bool jump = keyboard_is_key_pressed(KEY_FLY_UP) && rb->on_ground;
             rb->velocity = (Vec3) {{forward_vel.x, jump ? 10.0f : rb->velocity.y, forward_vel.z}};
