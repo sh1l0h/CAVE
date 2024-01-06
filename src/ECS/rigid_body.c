@@ -47,6 +47,10 @@ static void rigidbody_check_collision(Transform *transform,
     }
 
  break_loop:
+
+    // Temporary collision is addressed by freezing current position;
+    // works fine for high update rates for now.
+    // TODO: Implement a valid collision resolution method.
     if(!collides){
         zinc_vec3_add(&transform->position, vel, &transform->position);
 

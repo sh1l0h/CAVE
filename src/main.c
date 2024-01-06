@@ -61,12 +61,10 @@ int main()
     }
     log_debug("GLEW initialized");
 
-    if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0){
-        log_fatal("Failed to set the main thread prioriy to high: %s", SDL_GetError());
-        goto End;
-    }
+    if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0)
+        log_warn("Failed to set the main thread prioriy to high: %s", SDL_GetError());
 
-    // SDL_GL_SetSwapInterval(0);
+    //SDL_GL_SetSwapInterval(0);
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
@@ -123,7 +121,7 @@ int main()
     rigidbody->velocity = (Vec3) ZINC_VEC3_ZERO;
     rigidbody->gravity = true;
 
-    world_create(32, 20, 32);
+    world_create(64, 20, 64);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
