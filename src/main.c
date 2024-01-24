@@ -17,7 +17,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
 
-#define UPDATES_PER_SECOND 120
 
 int main()
 {
@@ -97,31 +96,9 @@ int main()
     ecs_init();
     cmp_init();
 
-    ecs->player_id = ecs_add_entity();
-    ecs_add_component(ecs->player_id, CMP_Transform);
-    ecs_add_component(ecs->player_id, CMP_Camera);
-    ecs_add_component(ecs->player_id, CMP_Player);
-    ecs_add_component(ecs->player_id, CMP_BoxCollider);
-    ecs_add_component(ecs->player_id, CMP_RigidBody);
+    player_create(&(Vec3) {{0.0f, 300.0f, 0.0f}});
 
-    Transform *transform = ecs_get_component(ecs->player_id, CMP_Transform);
-    transform->position = (Vec3) {{0, 250, 0}};
-
-    Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
-    camera->fov = 1.22173f;
-    camera->near = 0.01f;
-    camera->far = 1000.0f;
-    camera->aspect_ratio = 16.0f / 9.0f;
-
-    BoxCollider *collider = ecs_get_component(ecs->player_id, CMP_BoxCollider);
-    collider->half_size = (Vec3){{0.4f, 0.9f, 0.4f}};
-    collider->offset = (Vec3){{0.0f, -0.7f, 0.0f}};
-
-    RigidBody *rigidbody = ecs_get_component(ecs->player_id, CMP_RigidBody);
-    rigidbody->velocity = (Vec3) ZINC_VEC3_ZERO;
-    rigidbody->gravity = true;
-
-    world_create(64, 20, 64);
+    world_create(32, 20, 32);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
@@ -130,7 +107,7 @@ int main()
     // Main loop
     u32 last_time = SDL_GetTicks();
     u32 time_to_process = 0;
-    const u32 ms_per_update = 1000 / UPDATES_PER_SECOND;
+    const u32 ms_per_update = 1000 / FIXED_UPDATES_PER_SECOND;
     u32 second_count = 0;
     u32 frame_count = 0;
 
@@ -178,22 +155,24 @@ int main()
         }
 
         if(keyboard_did_key_go_down(KEY_SHOW_GIZMOS)) show_gizmos = !show_gizmos;
-
         mouse_update();
 
-        player_update_mouse_all();
+        // Fixed time update
         while(time_to_process >= ms_per_update){
-            f32 dt = 1.0f / UPDATES_PER_SECOND;
-
-            transform_update_all();
-            rigidbody_update_all(dt);
-            player_update_movement_all(dt);
-            camera_update_all();
-            world_update(world);
-
+            player_update_movement(FIXED_DELTA_TIME);
+            rigidbody_update(FIXED_DELTA_TIME);
             time_to_process -= ms_per_update;
         }
 
+        // Update
+        player_update_state();
+        transform_update();
+        camera_update();
+        
+        world_update(world);
+        chunk_thread_pool_apply_results();
+
+        // Render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         world_render(world);
 

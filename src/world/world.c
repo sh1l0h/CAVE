@@ -206,7 +206,6 @@ void world_update()
 
     world_center_around_position(world, &transform->position);
 
-    chunk_thread_pool_apply_results();
 }
 
 void world_render()

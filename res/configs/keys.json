@@ -1,10 +1,10 @@
 {
-	"forward": "W",
-	"backward":	"S",
-	"left":	"A",
-	"right": "D",
-	"fly up": "Space",
-	"fly down": "Left Shift",
-	"accelerate": "Left Ctrl",
-	"gizmos": "F1"
+    "forward": "W",
+    "backward": "S",
+    "left": "A",
+    "right": "D",
+    "jump": "Space",
+    "sneak": "Left Shift",
+    "accelerate": "Left Ctrl",
+    "gizmos": "F1"
 }

@@ -72,7 +72,7 @@ static void rigidbody_check_collision(Transform *transform,
     }
 }
 
-void rigidbody_update_all(f32 dt)
+void rigidbody_update(f32 dt)
 {
     HashMap *rbs = &ecs->archetype_component_table[CMP_RigidBody];
     HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];

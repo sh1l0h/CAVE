@@ -11,6 +11,9 @@
 #include "./core/log.h"
 #include "./core/direction.h"
 
+#define FIXED_UPDATES_PER_SECOND 120
+#define FIXED_DELTA_TIME (1.0f / FIXED_UPDATES_PER_SECOND)
+
 #define POS_2_BLOCK(pos) {{(i32)floorf((pos).x), (i32)floorf((pos).y), (i32)floorf((pos).z)}}   
 
 #define POS_2_CHUNK(pos) {{(i32)floorf((pos).x / CHUNK_SIZE), (i32)floorf((pos).y / CHUNK_SIZE), (i32)floorf((pos).z / CHUNK_SIZE)}}
@@ -22,5 +25,6 @@
 #define MIN(a, b) ((a) <= (b) ? (a) : (b))
 #define MAX(a, b) ((a) >= (b) ? (a) : (b))
 #define CLAMP(v, min, max) MAX(min, MIN(max, v))
+#define SIGN(a) ((a > 0) ? 1 : ((a < 0) ? -1 : 0))
 
 #endif

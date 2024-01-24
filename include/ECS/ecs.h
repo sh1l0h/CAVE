@@ -77,4 +77,7 @@ void ecs_sort_type(ArchetypeType *type);
 
 Archetype *ecs_get_archetype_by_type(ArchetypeType *type);
 
+// Functions for creating special entities
+u64 player_create(const Vec3 *pos);
+
 #endif

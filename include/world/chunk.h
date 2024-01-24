@@ -89,4 +89,6 @@ void chunk_render(Chunk *chunk);
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block);
 
+u16 chunk_get_block(Chunk *chunk, const Vec3i *offset);
+
 #endif

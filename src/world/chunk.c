@@ -497,3 +497,8 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
         }
     }
 }
+
+inline u16 chunk_get_block(Chunk *chunk, const Vec3i *offset)
+{
+    return chunk->block_data->data[CHUNK_OFFSET_2_INDEX(*offset)];
+}

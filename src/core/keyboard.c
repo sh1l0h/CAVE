@@ -11,8 +11,8 @@ i32 keyboard_init()
     key_names[KEY_MOVE_BACKWARD] = "backward";
     key_names[KEY_MOVE_LEFT] = "left";
     key_names[KEY_MOVE_RIGHT] = "right";
-    key_names[KEY_FLY_UP] = "fly up";
-    key_names[KEY_FLY_DOWN] = "fly down";
+    key_names[KEY_JUMP] = "jump";
+    key_names[KEY_SNEAK] = "sneak";
     key_names[KEY_ACCELERATE] = "accelerate";
     key_names[KEY_SHOW_GIZMOS] = "gizmos";
 

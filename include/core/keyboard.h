@@ -13,8 +13,8 @@ typedef enum Key {
     KEY_MOVE_BACKWARD,
     KEY_MOVE_LEFT,
     KEY_MOVE_RIGHT,
-    KEY_FLY_UP,
-    KEY_FLY_DOWN,
+    KEY_JUMP,
+    KEY_SNEAK,
     KEY_ACCELERATE,
     KEY_SHOW_GIZMOS,
 
