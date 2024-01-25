@@ -8,8 +8,8 @@
 #define PLAYER_HEIGHT_SNEAKING 1.6f
 #define PLAYER_COLLIDER_OFFSET 0.8f
 #define PLAYER_COLLIDER_OFFSET_SNEAKING 0.72f
-#define CHANGE_IN_HEIGHT_FROM_GROUND PLAYER_COLLIDER_OFFSET - PLAYER_COLLIDER_OFFSET_SNEAKING \
-    + (PLAYER_HEIGHT - PLAYER_HEIGHT_SNEAKING) / 2;
+#define CHANGE_IN_HEIGHT_FROM_GROUND (PLAYER_COLLIDER_OFFSET - PLAYER_COLLIDER_OFFSET_SNEAKING \
+                                      + (PLAYER_HEIGHT - PLAYER_HEIGHT_SNEAKING) / 2);
 
 #define PLAYER_WALKING_ACCELERATION 60.0f
 #define PLAYER_RUNNING_ACCELERATION 79.0f
@@ -136,6 +136,7 @@ void player_update_state()
                 zinc_vec3_scale(&transform->right, -1.0f, &temp);
                 zinc_vec3_add(&temp, &acc, &acc);
             }
+            zinc_vec3_normalize(&acc);
 
             f32 acc_mag = PLAYER_WALKING_ACCELERATION;
             if(player->is_sneaking)
@@ -143,7 +144,6 @@ void player_update_state()
             else if(keyboard_is_key_pressed(KEY_ACCELERATE))
                 acc_mag = PLAYER_RUNNING_ACCELERATION;
 
-            zinc_vec3_normalize(&acc);
             zinc_vec3_scale(&acc, acc_mag, &player->acceleration);
         }
     }

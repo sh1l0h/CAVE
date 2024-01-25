@@ -37,7 +37,13 @@ int main()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    SDL_Window *window = SDL_CreateWindow("CAVE", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL);
+    SDL_Window *window = SDL_CreateWindow("CAVE",
+                                          SDL_WINDOWPOS_CENTERED,
+                                          SDL_WINDOWPOS_CENTERED,
+                                          1280,
+                                          720,
+                                          SDL_WINDOW_OPENGL);
+
     SDL_GLContext context = NULL;
 
     if(window == NULL){
@@ -60,8 +66,10 @@ int main()
     }
     log_debug("GLEW initialized");
 
-    if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0)
-        log_warn("Failed to set the main thread prioriy to high: %s", SDL_GetError());
+    if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0){
+        log_warn("Failed to set the main thread prioriy to high: %s",
+                 SDL_GetError());
+    }
 
     //SDL_GL_SetSwapInterval(0);
 
@@ -74,15 +82,22 @@ int main()
 
     // Initializing the game
     chunk_shader = malloc(sizeof(Shader));
-    if(shader_create(chunk_shader, "./res/shaders/chunk.vert", "./res/shaders/chunk.frag")) goto End;
+    i32 shader_fail = shader_create(chunk_shader,
+                                    "./res/shaders/chunk.vert",
+                                    "./res/shaders/chunk.frag");
+    if(shader_fail)
+        goto End;
 
     chunk_shader_model_uni = shader_get_uniform_location(chunk_shader, "model");
     chunk_shader_view_uni = shader_get_uniform_location(chunk_shader, "view");
-    chunk_shader_projection_uni = shader_get_uniform_location(chunk_shader, "projection");
-    chunk_shader_uv_offset_uni = shader_get_uniform_location(chunk_shader, "uv_offset");
+    chunk_shader_projection_uni =
+        shader_get_uniform_location(chunk_shader, "projection");
+    chunk_shader_uv_offset_uni =
+        shader_get_uniform_location(chunk_shader, "uv_offset");
     chunk_bounding_radius = sqrtf(3.0f * CHUNK_SIZE * CHUNK_SIZE) / 2;
 
-    if(keyboard_init()) goto End;
+    if(keyboard_init())
+        goto End;
 
     chunk_thread_pool_init();
 
@@ -96,7 +111,8 @@ int main()
     ecs_init();
     cmp_init();
 
-    player_create(&(Vec3) {{0.0f, 300.0f, 0.0f}});
+    Vec3 player_initial_pos = {{0.0f, 300.0f, 0.0f}};
+    player_create(&player_initial_pos);
 
     world_create(32, 20, 32);
 
@@ -154,7 +170,8 @@ int main()
             }
         }
 
-        if(keyboard_did_key_go_down(KEY_SHOW_GIZMOS)) show_gizmos = !show_gizmos;
+        if(keyboard_did_key_go_down(KEY_SHOW_GIZMOS))
+            show_gizmos = !show_gizmos;
         mouse_update();
 
         // Fixed time update
@@ -169,7 +186,7 @@ int main()
         transform_update();
         camera_update();
         
-        world_update(world);
+        world_update();
         chunk_thread_pool_apply_results();
 
         // Render
