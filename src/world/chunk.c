@@ -133,13 +133,6 @@ const i32 neighbor_offset[] = {
     1, -1, 1
 }; 
 
-Shader *chunk_shader = NULL;
-GLuint chunk_shader_view_uni;
-GLuint chunk_shader_model_uni;
-GLuint chunk_shader_projection_uni; 
-GLuint chunk_shader_uv_offset_uni;
-f32 chunk_bounding_radius;
-
 //u16 chunk_generate_block(Chunk *chunk, Vec3i *offset)
 //{
 //Vec3 block_pos ={{
@@ -166,6 +159,54 @@ f32 chunk_bounding_radius;
 //
 //else return BLOCK_AIR;
 //}
+
+struct ChunkManager *chunk_manager;
+
+i32 chunk_manager_init()
+{
+    chunk_manager = malloc(sizeof(struct ChunkManager));
+
+    i32 shader_fail = shader_create(&chunk_manager->shader,
+                                    "./res/shaders/chunk.vert",
+                                    "./res/shaders/chunk.frag");
+    if(shader_fail)
+        return 1;
+
+    chunk_manager->model_uniform =
+        shader_get_uniform_location(&chunk_manager->shader, "model");
+
+    chunk_manager->view_uniform =
+        shader_get_uniform_location(&chunk_manager->shader, "view");
+
+    chunk_manager->projection_uniform =
+        shader_get_uniform_location(&chunk_manager->shader, "projection");
+
+    chunk_manager->uv_offset_uniform =
+        shader_get_uniform_location(&chunk_manager->shader, "uv_offset");
+
+    chunk_manager->bounding_radius = sqrtf(3.0f * CHUNK_SIZE * CHUNK_SIZE) / 2;
+
+    Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
+
+    f32 half_fov = camera->fov / 2.0f;
+    chunk_manager->tan_half_fov = tanf(half_fov);
+    chunk_manager->radius_over_cos_half_fov =
+        chunk_manager->bounding_radius / cosf(half_fov);
+    chunk_manager->radius_over_cos_atan =
+        (chunk_manager->bounding_radius /
+         cosf(atanf(camera->aspect_ratio * chunk_manager->tan_half_fov)));
+
+    return 0;
+}
+
+void chunk_manager_deinit()
+{
+    if(chunk_manager == NULL)
+        return;
+
+    shader_destroy(&chunk_manager->shader);
+    free(chunk_manager);
+}
 
 inline struct ChunkBlockData *chunk_block_data_allocate()
 {
@@ -364,10 +405,19 @@ static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
     for(i32 z = -1; z <= 1; z++){
         for(i32 x = -1; x <= 1; x++){
             for(i32 y = -1; y <= 1; y++){
-                Vec3i pos = {{x + chunk->position.x, y + chunk->position.y, z + chunk->position.z}};
+
+                Vec3i pos = {{
+                        x + chunk->position.x,
+                        y + chunk->position.y,
+                        z + chunk->position.z
+                    }};
+
                 Chunk *chunk = world_get_chunk(&pos);
-                if(chunk == NULL) continue;
+
+                if(chunk == NULL)
+                    continue;
                 chunk->block_data->owner_count++;
+
                 u8 index = (y + 1) + (x + 1) * 3 + (z + 1) * 9;
                 arg->block_data[index] = chunk->block_data;
             }
@@ -380,9 +430,11 @@ static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
 
 void chunk_render(Chunk *chunk)
 {
-    if(!chunk) return;
+    if(!chunk)
+        return;
 
-    if(chunk->block_count == 0) return;
+    if(chunk->block_count == 0)
+        return;
 
     if(chunk->is_dirty){
         struct ChunkMeshArg *arg = chunk_mesh_arg_create(chunk);
@@ -398,37 +450,38 @@ void chunk_render(Chunk *chunk)
 
     if(chunk->index_count == 0) return;
 
-    Transform *player_transform = ecs_get_component(ecs->player_id, CMP_Transform);
+    Transform *player_transform =
+        ecs_get_component(ecs->player_id, CMP_Transform);
+
     Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
-
+    
     Vec3 chunk_center;
-
     zinc_vec3_sub(&chunk->center, &player_transform->position, &chunk_center);
 
-    f32 projection_on_z = zinc_vec3_dot(&player_transform->forward, &chunk_center);
-    if(projection_on_z + chunk_bounding_radius < camera->near ||
-       projection_on_z - chunk_bounding_radius > camera->far)
+    f32 projection_on_z =
+        zinc_vec3_dot(&player_transform->forward, &chunk_center);
+
+    if(projection_on_z + chunk_manager->bounding_radius < camera->near ||
+       projection_on_z - chunk_manager->bounding_radius > camera->far)
         return;
 
-    f32 half_fov = camera->fov / 2.0f;
-    f32 tan_half_fov = tanf(half_fov);
-    f32 d = chunk_bounding_radius / cosf(half_fov);
-    f32 h = tan_half_fov * projection_on_z;
+    f32 h = chunk_manager->tan_half_fov * projection_on_z;
 
     f32 projection_on_y = zinc_vec3_dot(&player_transform->up, &chunk_center);
+
     if(projection_on_y < 0.0f)
         projection_on_y *= -1;
 
-    if(projection_on_y > d + h)
+    if(projection_on_y > chunk_manager->radius_over_cos_half_fov + h)
         return;
 
     h *= camera->aspect_ratio;
-    d = chunk_bounding_radius / cosf(atanf(camera->aspect_ratio * tan_half_fov));
     f32 projection_on_x = zinc_vec3_dot(&player_transform->right, &chunk_center);
     if(projection_on_x < 0)
         projection_on_x *= -1;
 
-    if(projection_on_x > d + h) return;
+    if(projection_on_x > chunk_manager->radius_over_cos_atan + h)
+        return;
 
     glBindVertexArray(chunk->VAO);
 
@@ -441,7 +494,10 @@ void chunk_render(Chunk *chunk)
     Mat4 model;
     zinc_translate(model, &pos);
 
-    glUniformMatrix4fv(chunk_shader_model_uni, 1, GL_TRUE, (GLfloat *) model);
+    glUniformMatrix4fv(chunk_manager->model_uniform,
+                       1,
+                       GL_TRUE,
+                       (GLfloat *) model);
 
     glDrawElements(GL_TRIANGLES, chunk->index_count, GL_UNSIGNED_SHORT, 0);
 }
@@ -450,14 +506,17 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 {
     if(chunk->block_data->owner_count > 1){
         struct ChunkBlockData *new_block_data = chunk_block_data_allocate();
-        memcpy(new_block_data->data, chunk->block_data->data, CHUNK_VOLUME * sizeof(u16));
+        memcpy(new_block_data->data,
+               chunk->block_data->data,
+               CHUNK_VOLUME * sizeof(u16));
 
         chunk->block_data->owner_count--;
         chunk->block_data = new_block_data;
     }
     
     if(block == BLOCK_AIR) chunk->block_count--;
-    else if(chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR) chunk->block_count++;
+    else if(chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR)
+        chunk->block_count++;
 
     chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
     chunk->is_dirty = true;

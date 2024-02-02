@@ -71,7 +71,7 @@ int main()
                  SDL_GetError());
     }
 
-    //SDL_GL_SetSwapInterval(0);
+    SDL_GL_SetSwapInterval(0);
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
@@ -81,20 +81,13 @@ int main()
     glClearColor(0.5f, 0.8f, 0.98f, 1.0f);
 
     // Initializing the game
-    chunk_shader = malloc(sizeof(Shader));
-    i32 shader_fail = shader_create(chunk_shader,
-                                    "./res/shaders/chunk.vert",
-                                    "./res/shaders/chunk.frag");
-    if(shader_fail)
-        goto End;
+    ecs_init();
+    cmp_init();
 
-    chunk_shader_model_uni = shader_get_uniform_location(chunk_shader, "model");
-    chunk_shader_view_uni = shader_get_uniform_location(chunk_shader, "view");
-    chunk_shader_projection_uni =
-        shader_get_uniform_location(chunk_shader, "projection");
-    chunk_shader_uv_offset_uni =
-        shader_get_uniform_location(chunk_shader, "uv_offset");
-    chunk_bounding_radius = sqrtf(3.0f * CHUNK_SIZE * CHUNK_SIZE) / 2;
+    Vec3 player_initial_pos = {{0.0f, 300.0f, 0.0f}};
+    player_create(&player_initial_pos);
+
+    chunk_manager_init();
 
     if(keyboard_init())
         goto End;
@@ -107,12 +100,6 @@ int main()
 
     gizmos_init();
     gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
-
-    ecs_init();
-    cmp_init();
-
-    Vec3 player_initial_pos = {{0.0f, 300.0f, 0.0f}};
-    player_create(&player_initial_pos);
 
     world_create(32, 20, 32);
 
@@ -222,10 +209,7 @@ int main()
 
     texture_manager_deinit();
 
-    if(chunk_shader != NULL){
-        shader_destroy(chunk_shader);
-        free(chunk_shader);
-    }
+    chunk_manager_deinit();
 
     if(context != NULL)
         SDL_GL_DeleteContext(context);

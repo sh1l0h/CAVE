@@ -210,14 +210,21 @@ void world_update()
 
 void world_render()
 {
-    shader_bind(chunk_shader);
+    shader_bind(&chunk_manager->shader);
 
     Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
 
+    glUniformMatrix4fv(chunk_manager->view_uniform,
+                       1,
+                       GL_TRUE,
+                       (GLfloat *)camera->view);
 
-    glUniformMatrix4fv(chunk_shader_view_uni, 1, GL_TRUE, (GLfloat *)camera->view);
-    glUniformMatrix4fv(chunk_shader_projection_uni, 1, GL_TRUE, (GLfloat *)camera->projection);
-    glUniform1f(chunk_shader_uv_offset_uni, 1.0f/16.0f);
+    glUniformMatrix4fv(chunk_manager->projection_uniform,
+                       1,
+                       GL_TRUE,
+                       (GLfloat *)camera->projection);
+
+    glUniform1f(chunk_manager->uv_offset_uniform, UNIT_UV_OFFSET);
 
     texture_manager_bind(TEXTURE_TYPE_BLOCK);
 

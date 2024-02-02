@@ -15,8 +15,7 @@ TextureManager *texture_manager = NULL;
 static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
                                                   TextureType type,
                                                   GLsizei texture_count,
-                                                  GLint width,
-                                                  GLint height)
+                                                  GLint width, GLint height)
 {
 
     DIR *texture_dir = opendir(texture_dir_path);

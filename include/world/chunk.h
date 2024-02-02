@@ -17,6 +17,8 @@
 #define BLOCK_LIGHT_MASK 0xFF00
 #define BLOCK_LIGHT_OFFSET 8
 
+#define UNIT_UV_OFFSET (1.0f / 16.0f)
+
 #define CHUNK_IN_BOUNDS(pos) ((pos).x >= 0 && (pos).x < CHUNK_SIZE &&	\
                               (pos).y >= 0 && (pos).y < CHUNK_SIZE &&	\
                               (pos).z >= 0 && (pos).z < CHUNK_SIZE)
@@ -65,12 +67,23 @@ typedef struct Chunk {
     GLuint VAO, VBO, IBO;
 } Chunk;
 
-extern Shader *chunk_shader;
-extern GLuint chunk_shader_view_uni; 
-extern GLuint chunk_shader_model_uni;
-extern GLuint chunk_shader_projection_uni; 
-extern GLuint chunk_shader_uv_offset_uni; 
-extern f32 chunk_bounding_radius;
+extern struct ChunkManager {
+    Shader shader;
+    GLuint view_uniform;
+    GLuint model_uniform;
+    GLuint projection_uniform;
+    GLuint uv_offset_uniform;
+
+    // Used for frustum culling
+    f32 bounding_radius;
+    f32 tan_half_fov;
+    f32 radius_over_cos_half_fov;
+    f32 radius_over_cos_atan;
+} *chunk_manager;
+
+i32 chunk_manager_init();
+
+void chunk_manager_deinit();
 
 struct ChunkBlockData *chunk_block_data_allocate();
 
