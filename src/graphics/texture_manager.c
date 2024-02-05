@@ -13,13 +13,13 @@
 TextureManager *texture_manager = NULL;
 
 static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
-                                                  TextureType type,
-                                                  GLsizei texture_count,
-                                                  GLint width, GLint height)
+        TextureType type,
+        GLsizei texture_count,
+        GLint width, GLint height)
 {
 
     DIR *texture_dir = opendir(texture_dir_path);
-    if(texture_dir == NULL){
+    if(texture_dir == NULL) {
         log_error("Failed to open \"%s\" directory", texture_dir_path);
         return 1;
     }
@@ -30,12 +30,14 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
 
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,
+                    GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     f32 max_anisotropy;
     glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy);
-    glTexParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
+    glTexParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                    max_anisotropy);
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY,
                  0,
@@ -52,11 +54,11 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
 
     GLint index = 0;
     struct dirent *curr;
-    while((curr = readdir(texture_dir)) != NULL){
+    while((curr = readdir(texture_dir)) != NULL) {
         if(curr->d_name[0] == '.') continue;
 
         u64 file_name_len = strlen(curr->d_name);
-        if(file_name_len < 4 || strcmp(".png", &curr->d_name[file_name_len - 4]) != 0){
+        if(file_name_len < 4 || strcmp(".png", &curr->d_name[file_name_len - 4]) != 0) {
             log_warn("Ignoring file \"%s\" in \"%s\" directory. Texture files must have a \".png\" extension.",
                      curr->d_name,
                      texture_dir_path);
@@ -66,9 +68,10 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
         sprintf(file_path, "%s/%s", texture_dir_path, curr->d_name);
 
         GLint curr_width, curr_height;
-        u8 *data = stbi_load(file_path, &curr_width, &curr_height, NULL, STBI_rgb_alpha);
+        u8 *data = stbi_load(file_path, &curr_width, &curr_height, NULL,
+                             STBI_rgb_alpha);
 
-        if(curr_width != width || curr_height != height){
+        if(curr_width != width || curr_height != height) {
             log_error("The dimensions of the texture \"%s\" in the \"%s\" directory do not match the expected size.",
                       curr->d_name,
                       texture_dir_path);
@@ -77,10 +80,12 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
             break;
         }
 
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, index, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, index, width, height, 1, GL_RGBA,
+                        GL_UNSIGNED_BYTE, data);
         stbi_image_free(data);
 
-        struct TextureRecord *record = malloc(sizeof(struct TextureManager) + sizeof(char) * (file_name_len + 1));
+        struct TextureRecord *record = malloc(sizeof(struct TextureManager) + sizeof(
+                char) * (file_name_len + 1));
         memcpy(record->texture_name, curr->d_name, sizeof(char) * (file_name_len + 1));
         record->index = index++;
 
@@ -98,7 +103,8 @@ void texture_manager_init()
 {
     texture_manager = malloc(sizeof(TextureManager));
 
-    hashmap_create(&texture_manager->texture_records, 32, string_hash, string_cmp, 0.8f);
+    hashmap_create(&texture_manager->texture_records, 32, string_hash, string_cmp,
+                   0.8f);
 
     texture_manager_load_textures_from_dir(BLOCK_TEXTURE_DIR,
                                            TEXTURE_TYPE_BLOCK,
@@ -114,7 +120,7 @@ void texture_manager_deinit()
 
     struct TextureRecord *record;
     hashmap_foreach_data(&texture_manager->texture_records, record)
-        free(record);
+    free(record);
 
     hashmap_destroy(&texture_manager->texture_records);
 
@@ -128,6 +134,7 @@ void texture_manager_bind(TextureType type)
 
 GLint texture_manager_get_index(const char *texture_name)
 {
-    struct TextureRecord *record = hashmap_get(&texture_manager->texture_records, texture_name);
+    struct TextureRecord *record = hashmap_get(&texture_manager->texture_records,
+                                   texture_name);
     return record->index;
 }

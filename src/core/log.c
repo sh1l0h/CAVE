@@ -27,16 +27,17 @@ void log_print(i32 type, const char *file, i32 line, const char *format, ...)
 
     char time_buffer[16];
     time_t t = time(NULL);
-    time_buffer[strftime(time_buffer, sizeof(time_buffer), "%H:%M:%S", localtime(&t))] = '\0';
+    time_buffer[strftime(time_buffer, sizeof(time_buffer), "%H:%M:%S",
+                                               localtime(&t))] = '\0';
 
     FILE *stream = type < 2 ? stdout : stderr;
 
     SDL_LockMutex(log_mutex);
-    fprintf(stream ,"\e[0;32m[%s]\e[0m %s (line %d) %s%s\e[0m:\n", 
-            time_buffer, 
-            file, 
-            line, 
-            type_colors[type], 
+    fprintf(stream, "\e[0;32m[%s]\e[0m %s (line %d) %s%s\e[0m:\n",
+            time_buffer,
+            file,
+            line,
+            type_colors[type],
             type_strings[type]);
     vfprintf(stream, format, args);
     fprintf(stream, "\n");

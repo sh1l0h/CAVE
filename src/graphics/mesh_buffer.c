@@ -19,9 +19,8 @@ void mesh_buffer_clean(MeshBuffer *mb)
 
 void mesh_buffer_append(MeshBuffer *mb, const void *data, u32 data_size)
 {
-    if(mb->index + data_size >= mb->allocated_bytes){
+    if(mb->index + data_size >= mb->allocated_bytes)
         mb->data = realloc(mb->data, (mb->allocated_bytes *= 2));
-    }
 
     memcpy((u8 *)mb->data + mb->index, data, data_size);
     mb->index += data_size;

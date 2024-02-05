@@ -21,9 +21,9 @@
 int main()
 {
     log_create();
-    
+
     // Initializing SDL window and opengl
-    if(SDL_Init(SDL_INIT_VIDEO) < 0){
+    if(SDL_Init(SDL_INIT_VIDEO) < 0) {
         log_fatal("Failed to initialize SDL: %s", SDL_GetError());
         return 1;
     }
@@ -46,27 +46,27 @@ int main()
 
     SDL_GLContext context = NULL;
 
-    if(window == NULL){
+    if(window == NULL) {
         log_fatal("Failed to create window: %s", SDL_GetError());
         goto End;
     }
     log_debug("Window created");
 
     context = SDL_GL_CreateContext(window);
-    if(context == NULL){
+    if(context == NULL) {
         log_fatal("Failed to create OpenGL context: %s", SDL_GetError());
         goto End;
     }
     log_debug("OpenGL context created");
 
     GLenum err = glewInit();
-    if(err != GLEW_OK){
+    if(err != GLEW_OK) {
         log_fatal("Failed to initialize GLEW: %s", glewGetErrorString(err));
         goto End;
     }
     log_debug("GLEW initialized");
 
-    if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0){
+    if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0) {
         log_warn("Failed to set the main thread prioriy to high: %s",
                  SDL_GetError());
     }
@@ -115,7 +115,7 @@ int main()
     u32 frame_count = 0;
 
     bool quit = false;
-    while(!quit){
+    while(!quit) {
         u32 curr_time = SDL_GetTicks();
         u32 delta_time = curr_time - last_time;
         last_time = curr_time;
@@ -126,8 +126,8 @@ int main()
         keyboard_update_previous();
 
         SDL_Event event;
-        while(SDL_PollEvent(&event)){
-            switch(event.type){
+        while(SDL_PollEvent(&event)) {
+            switch(event.type) {
 
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
@@ -162,7 +162,7 @@ int main()
         mouse_update();
 
         // Fixed time update
-        while(time_to_process >= ms_per_update){
+        while(time_to_process >= ms_per_update) {
             player_update_movement(FIXED_DELTA_TIME);
             rigidbody_update(FIXED_DELTA_TIME);
             time_to_process -= ms_per_update;
@@ -172,7 +172,7 @@ int main()
         player_update_state();
         transform_update();
         camera_update();
-        
+
         world_update();
         chunk_thread_pool_apply_results();
 
@@ -182,12 +182,12 @@ int main()
 
         frame_count++;
 
-        if(second_count >= 1000){
+        if(second_count >= 1000) {
             log_info("FPS: %f", frame_count * 1000.0f / second_count);
             second_count = 0;
             frame_count = 0;
         }
-        
+
         if(show_gizmos) gizmos_draw();
 
         SDL_GL_SwapWindow(window);
@@ -195,13 +195,13 @@ int main()
         SDL_Delay(1);
     }
 
- End:
+End:
 
     ecs_deinit();
 
     world_destroy();
 
-    if(chunk_thread_pool != NULL){
+    if(chunk_thread_pool != NULL) {
         chunk_thread_pool_wait();
         chunk_thread_pool_stop();
         chunk_thread_pool_deinit();

@@ -18,8 +18,10 @@ void array_list_set(ArrayList *list, u64 index, const void *element);
 
 void *array_list_offset(ArrayList *list, u64 index);
 
-void array_list_remove(ArrayList *list, u64 index, void (*free_element)(void *));
-void array_list_unordered_remove(ArrayList *list, u64 index, void (*free_element)(void *));
+void array_list_remove(ArrayList *list, u64 index,
+                       void (*free_element)(void *));
+void array_list_unordered_remove(ArrayList *list, u64 index,
+                                 void (*free_element)(void *));
 
 void *array_list_append(ArrayList *list, const void *element);
 

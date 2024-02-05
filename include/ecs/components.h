@@ -43,7 +43,7 @@ typedef struct Camera {
 typedef struct Player {
     Vec3 acceleration;
     bool is_sneaking;
-    
+
     Vec3i chunk_pos;
     Chunk *selected_block_chunk;
     Vec3i selected_block_offset;

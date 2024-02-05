@@ -13,10 +13,10 @@ typedef enum MouseButton {
 typedef struct Mouse {
     Vec2i position;
     Vec2i relative_position;
-    
+
     u32 current_state;
     u32 previous_state;
-} Mouse; 
+} Mouse;
 
 extern Mouse mouse;
 

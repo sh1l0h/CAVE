@@ -48,7 +48,8 @@ Chunk *world_get_chunk(const Vec3i *chunk_pos);
 
 void world_make_neighbors_dirty(const Vec3i *chunk_pos);
 
-void world_block_to_chunk_and_offset(const Vec3i *block_pos, Chunk **chunk, Vec3i *block_offset);
+void world_block_to_chunk_and_offset(const Vec3i *block_pos, Chunk **chunk,
+                                     Vec3i *block_offset);
 
 void world_cast_ray(const Vec3 *origin,
                     const Vec3 *dir,
@@ -63,6 +64,6 @@ bool world_is_offset_in_bounds(const Vec3i *offset);
 
 bool world_is_chunk_in_bounds(const Vec3i *chunk_pos);
 
-bool world_is_block_in_bounds(const Vec3i *block_pos); 
+bool world_is_block_in_bounds(const Vec3i *block_pos);
 
 #endif

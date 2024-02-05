@@ -1,6 +1,8 @@
 #include "../../include/data_structures/hash_map.h"
 
-void hashmap_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor)
+void hashmap_create(HashMap *hm, u64 initial_size,
+                    u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg),
+                    f32 load_factor)
 {
     hm->buckets = calloc(initial_size, sizeof(struct HashMapNode *));
     hm->allocated_buckets = initial_size;
@@ -13,7 +15,7 @@ void hashmap_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *eleme
 
 void hashmap_destroy(HashMap *hm)
 {
-    for(u64 i = 0; i < hm->allocated_buckets; i++){
+    for(u64 i = 0; i < hm->allocated_buckets; i++) {
         struct HashMapNode *curr = hm->buckets[i];
 
         while(curr != NULL) {
@@ -28,9 +30,10 @@ void hashmap_destroy(HashMap *hm)
 
 static void hashmap_resize(HashMap *hm, u32 new_buckets_size)
 {
-    struct HashMapNode **new_buckets = calloc(new_buckets_size, sizeof(struct HashMapNode*));
+    struct HashMapNode **new_buckets = calloc(new_buckets_size,
+                                       sizeof(struct HashMapNode *));
 
-    for(u64 i = 0; i < hm->allocated_buckets; i++){
+    for(u64 i = 0; i < hm->allocated_buckets; i++) {
         struct HashMapNode *curr = hm->buckets[i];
         while(curr != NULL) {
             struct HashMapNode *next = curr->next;
@@ -61,7 +64,7 @@ void hashmap_add(HashMap *hm, void *key, void *element)
     hm->size++;
 
     if((f32)hm->size / (f32)hm->allocated_buckets > hm->load_factor)
-        hashmap_resize(hm, hm->allocated_buckets*2);
+        hashmap_resize(hm, hm->allocated_buckets * 2);
 }
 
 void *hashmap_get(HashMap *hm, const void *key)
@@ -70,7 +73,7 @@ void *hashmap_get(HashMap *hm, const void *key)
 
     struct HashMapNode *curr = hm->buckets[index];
 
-    while(curr != NULL){
+    while(curr != NULL) {
         if(!hm->cmp(curr->key, key)) return curr->data;
 
         curr = curr->next;
@@ -86,8 +89,8 @@ void *hashmap_remove(HashMap *hm, const void *key)
     struct HashMapNode *curr = hm->buckets[index];
     struct HashMapNode *prev = NULL;
 
-    while(curr != NULL){
-        if(!hm->cmp(curr->key, key)){
+    while(curr != NULL) {
+        if(!hm->cmp(curr->key, key)) {
             struct HashMapNode *next = curr->next;
             hm->size--;
 
@@ -136,7 +139,7 @@ i32 vec3i_cmp(const void *element, const void *arg)
 //source: https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 u64 u64_hash(const void *key)
 {
-    u64 x = *(u32*)key;
+    u64 x = *(u32 *)key;
 
     x = ((x >> 16) ^ x) * 0x45d9f3b;
     x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -147,7 +150,7 @@ u64 u64_hash(const void *key)
 
 i32 u64_cmp(const void *key, const void *arg)
 {
-    return *(u64*)key - *(u64*)arg;
+    return *(u64 *)key - *(u64 *)arg;
 }
 
 //source: https://stackoverflow.com/questions/8317508/hash-function-for-a-string
@@ -156,7 +159,7 @@ u64 string_hash(const void *key)
     const char *string = key;
 
     u64 result = 37ULL;
-    while(*string != '\0'){
+    while(*string != '\0') {
         result = (result * 54059ULL) ^ (*string * 76963ULL);
         string++;
     }

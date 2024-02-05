@@ -23,8 +23,9 @@ void array_list_set(ArrayList *list, u64 index, const void *element)
 
 void *array_list_offset(ArrayList *list, u64 index)
 {
-    if(index >= list->size){
-        log_error("Arraylist index out of bounds: Index: %d, Size: %d", index, list->size);
+    if(index >= list->size) {
+        log_error("Arraylist index out of bounds: Index: %d, Size: %d", index,
+                  list->size);
         return NULL;
     }
 
@@ -33,11 +34,12 @@ void *array_list_offset(ArrayList *list, u64 index)
 
 void array_list_remove(ArrayList *list, u64 index, void (*free_element)(void *))
 {
-    if(index >= list->size){
-        log_error("Arraylist index out of bounds: Index: %d, Size: %d", index, list->size);
+    if(index >= list->size) {
+        log_error("Arraylist index out of bounds: Index: %d, Size: %d", index,
+                  list->size);
         return;
     }
-    
+
     list->size--;
     if(list->size == index) return;
 
@@ -47,14 +49,16 @@ void array_list_remove(ArrayList *list, u64 index, void (*free_element)(void *))
     memmove(element, next_element, list->element_size * (list->size - index));
 }
 
-void array_list_unordered_remove(ArrayList *list, u64 index, void (*free_element)(void *))
+void array_list_unordered_remove(ArrayList *list, u64 index,
+                                 void (*free_element)(void *))
 {
-    if(index >= list->size){
-        log_error("Arraylist index out of bounds: Index: %d, Size: %d", index, list->size);
+    if(index >= list->size) {
+        log_error("Arraylist index out of bounds: Index: %d, Size: %d", index,
+                  list->size);
         return;
     }
 
-    if(index == list->size - 1){
+    if(index == list->size - 1) {
         list->size--;
         return;
     }
@@ -83,6 +87,6 @@ void *array_list_append(ArrayList *list, const void *element)
 void array_list_sort(ArrayList *list, i32 (*cmp)(const void *, const void *))
 {
     //the time complexity of qsort is not defined by the standard
-    //TODO: write sort 
+    //TODO: write sort
     qsort(list->data, list->size, list->element_size, cmp);
 }

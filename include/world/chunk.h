@@ -37,7 +37,7 @@ struct ChunkBlockData {
 struct ChunkMeshArg {
     u32 mesh_time;
     Vec3i chunk_pos;
-    // 3D array of chunk block data 
+    // 3D array of chunk block data
     struct ChunkBlockData *block_data[27];
 };
 
@@ -48,11 +48,11 @@ typedef struct Chunk {
     Vec3 center;
 
     // [12;15] - Sunlight intensity
-    // [8;11] - Light intensity 
-    // [0;7]  - Block id 
+    // [8;11] - Light intensity
+    // [0;7]  - Block id
     struct ChunkBlockData *block_data;
 
-    // Number of non-air blocks 
+    // Number of non-air blocks
     u16 block_count;
 
     // If true, the chuck needs to be remeshed

@@ -43,7 +43,7 @@ typedef struct ECS {
     u64 player_id;
 
     // Maps entity IDs to their archetype records
-    // where index is a column index in the 'components' array 
+    // where index is a column index in the 'components' array
     ArrayList entities;
 
     // Stores free entity IDs for reuse

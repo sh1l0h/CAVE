@@ -7,7 +7,7 @@
 
 typedef enum TextureType {
     TEXTURE_TYPE_BLOCK = 0,
-    
+
     TEXTURE_TYPE_COUNT // Always keep this as the last entry
 } TextureType;
 
@@ -19,7 +19,7 @@ struct TextureRecord {
 typedef struct TextureManager {
     // Maps texture name to its texture record
     HashMap texture_records;
-    
+
     GLuint texture_arrays[TEXTURE_TYPE_COUNT];
 } TextureManager;
 

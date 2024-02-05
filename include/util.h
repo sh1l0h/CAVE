@@ -14,7 +14,7 @@
 #define FIXED_UPDATES_PER_SECOND 120
 #define FIXED_DELTA_TIME (1.0f / FIXED_UPDATES_PER_SECOND)
 
-#define POS_2_BLOCK(pos) {{(i32)floorf((pos).x), (i32)floorf((pos).y), (i32)floorf((pos).z)}}   
+#define POS_2_BLOCK(pos) {{(i32)floorf((pos).x), (i32)floorf((pos).y), (i32)floorf((pos).z)}}
 
 #define POS_2_CHUNK(pos) {{(i32)floorf((pos).x / CHUNK_SIZE), (i32)floorf((pos).y / CHUNK_SIZE), (i32)floorf((pos).z / CHUNK_SIZE)}}
 

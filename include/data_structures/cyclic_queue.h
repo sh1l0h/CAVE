@@ -14,7 +14,8 @@ typedef struct CyclicQueue {
     u64 size;
 } CyclicQueue;
 
-void cyclic_queue_create(CyclicQueue *queue, u32 element_size, u64 initial_size);
+void cyclic_queue_create(CyclicQueue *queue, u32 element_size,
+                         u64 initial_size);
 void cyclic_queue_destroy(CyclicQueue *queue);
 
 void *cyclic_queue_offset(CyclicQueue *queue, u64 index);
