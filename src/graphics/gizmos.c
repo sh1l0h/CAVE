@@ -1,6 +1,6 @@
 #include "../../include/graphics/gizmos.h"
 #include "../../include/graphics/shader.h"
-#include "../../include/ECS/ecs.h"
+#include "../../include/ecs/ecs.h"
 
 Gizmos gizmos;
 

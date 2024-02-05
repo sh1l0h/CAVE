@@ -1,4 +1,4 @@
-#include "../../include/ECS/ecs.h"
+#include "../../include/ecs/ecs.h"
 
 ECS *ecs = NULL;
 
@@ -29,7 +29,7 @@ void ecs_init()
     array_list_create(&ecs->entities, sizeof(struct ArchetypeRecord), 32);
     cyclic_queue_create(&ecs->free_entities, sizeof(u64), 64);
 
-    hashmap_create(&ecs->archetypes, 128, u64_array_hash, u64_array_cmp, 0.8f);
+    hashmap_create(&ecs->archetypes, 128, archetype_type_hash, archetype_type_cmp, 0.8f);
     for(u64 i = 0; i < CMP_COUNT; i++){
         hashmap_create(ecs->archetype_component_table + i, 100, u64_hash, u64_cmp, 0.8f);
     }
@@ -301,4 +301,30 @@ Archetype *ecs_get_archetype_by_type(ArchetypeType *type)
     hashmap_add(&ecs->archetypes, &result->type, result);
 
     return result;
+}
+
+u64 archetype_type_hash(const void *key)
+{
+    const ArchetypeType *type = key;
+
+    u64 result = 14695981039346656037ULL;
+    for(u64 i = 0; i < type->size; i++){
+        result ^= type->ids[i];
+        result *= 1099511628211ULL;
+    }
+    return result;
+}
+
+i32 archetype_type_cmp(const void *key, const void *arg)
+{
+    const ArchetypeType *key_type = key;
+    const ArchetypeType *arg_type = arg;
+
+    if(key_type->size != arg_type->size) return 1;
+
+    for(u64 i = 0; i < key_type->size; i++)
+        if(key_type->ids[i] != arg_type->ids[i])
+            return 1;
+
+    return 0;
 }

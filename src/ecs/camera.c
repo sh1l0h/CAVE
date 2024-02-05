@@ -1,4 +1,4 @@
-#include "../../include/ECS/ecs.h"
+#include "../../include/ecs/ecs.h"
 
 void camera_update()
 {

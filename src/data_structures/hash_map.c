@@ -1,5 +1,4 @@
 #include "../../include/data_structures/hash_map.h"
-#include "../../include/ECS/ecs.h"
 
 void hashmap_create(HashMap *hm, u64 initial_size, u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg), f32 load_factor)
 {
@@ -149,32 +148,6 @@ u64 u64_hash(const void *key)
 i32 u64_cmp(const void *key, const void *arg)
 {
     return *(u64*)key - *(u64*)arg;
-}
-
-u64 u64_array_hash(const void *key)
-{
-    const ArchetypeType *type = key;
-
-    u64 result = 14695981039346656037ULL;
-    for(u64 i = 0; i < type->size; i++){
-        result ^= type->ids[i];
-        result *= 1099511628211ULL;
-    }
-    return result;
-}
-
-i32 u64_array_cmp(const void *key, const void *arg)
-{
-    const ArchetypeType *key_type = key;
-    const ArchetypeType *arg_type = arg;
-
-    if(key_type->size != arg_type->size) return 1;
-
-    for(u64 i = 0; i < key_type->size; i++)
-        if(key_type->ids[i] != arg_type->ids[i])
-            return 1;
-
-    return 0;
 }
 
 //source: https://stackoverflow.com/questions/8317508/hash-function-for-a-string

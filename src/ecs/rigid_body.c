@@ -1,4 +1,4 @@
-#include "../../include/ECS/ecs.h"
+#include "../../include/ecs/ecs.h"
 #include "../../include/world/world.h"
 
 static void rigidbody_check_collision(Transform *transform,

@@ -60,9 +60,6 @@ i32 vec3i_cmp(const void *key, const void *arg);
 u64 u64_hash(const void *key);
 i32 u64_cmp(const void *key, const void *arg);
 
-u64 u64_array_hash(const void *key);
-i32 u64_array_cmp(const void *key, const void *arg);
-
 u64 string_hash(const void *key);
 i32 string_cmp(const void *key, const void *arg);
 

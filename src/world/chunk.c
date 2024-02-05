@@ -2,7 +2,7 @@
 #include "../../include/world/world.h"
 #include "../../include/core/chunk_thread_pool.h"
 #include "../../include/world/block.h"
-#include "../../include/ECS/ecs.h"
+#include "../../include/ecs/ecs.h"
 #include <SDL2/SDL.h>
 
 #define DATA_X_OFFSET 0u

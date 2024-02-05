@@ -1,4 +1,4 @@
-#include "../../include/ECS/components.h"
+#include "../../include/ecs/components.h"
 
 u32 component_sizes[CMP_COUNT];
 

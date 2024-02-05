@@ -1,4 +1,4 @@
-#include "../../include/ECS/ecs.h"
+#include "../../include/ecs/ecs.h"
 #include "../../include/core/mouse.h"
 #include "../../include/core/keyboard.h"
 #include "../../include/world/world.h"

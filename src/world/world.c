@@ -1,6 +1,6 @@
 #include "../../include/world/world.h"
 #include "../../include/world/block.h"
-#include "../../include/ECS/ecs.h"
+#include "../../include/ecs/ecs.h"
 #include "../../include/core/chunk_thread_pool.h"
 #include "../../include/graphics/texture_manager.h"
 

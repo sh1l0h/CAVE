@@ -11,8 +11,8 @@
 #include "../include/graphics/texture_manager.h"
 #include "../include/world/world.h"
 #include "../include/world/block.h"
-#include "../include/ECS/systems.h"
-#include "../include/ECS/ecs.h"
+#include "../include/ecs/systems.h"
+#include "../include/ecs/ecs.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
