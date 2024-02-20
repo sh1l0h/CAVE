@@ -118,11 +118,7 @@ void texture_manager_deinit()
     if(texture_manager == NULL)
         return;
 
-    struct TextureRecord *record;
-    hashmap_foreach_data(&texture_manager->texture_records, record)
-    free(record);
-
-    hashmap_destroy(&texture_manager->texture_records);
+    hashmap_destroy(&texture_manager->texture_records, NULL, free);
 
     free(texture_manager);
 }

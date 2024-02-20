@@ -137,6 +137,11 @@ void world_create(i32 size_x, i32 size_y, i32 size_z)
     };
 }
 
+static void chunk_destroy_wrapper(void *chunk)
+{
+    chunk_destroy(chunk);
+}
+
 void world_destroy()
 {
     if(world == NULL)
@@ -149,12 +154,8 @@ void world_destroy()
 
     free(world->chunks);
 
-    Chunk *chunk;
-    hashmap_foreach_data(&world->inactive_chunks, chunk)
-    chunk_destroy(chunk);
-
-    hashmap_destroy(&world->inactive_chunks);
-    hashmap_destroy(&world->columns_in_generation);
+    hashmap_destroy(&world->inactive_chunks, NULL, chunk_destroy_wrapper);
+    hashmap_destroy(&world->columns_in_generation, NULL, NULL);
 
     free(world);
 }

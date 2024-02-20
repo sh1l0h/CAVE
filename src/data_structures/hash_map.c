@@ -13,7 +13,7 @@ void hashmap_create(HashMap *hm, u64 initial_size,
     hm->cmp = cmp;
 }
 
-void hashmap_destroy(HashMap *hm)
+void hashmap_destroy(HashMap *hm, void (*free_key)(void *), void (*free_data)(void *))
 {
     for(u64 i = 0; i < hm->allocated_buckets; i++) {
         struct HashMapNode *curr = hm->buckets[i];
@@ -21,6 +21,13 @@ void hashmap_destroy(HashMap *hm)
         while(curr != NULL) {
             struct HashMapNode *temp = curr;
             curr = curr->next;
+
+            if(free_key != NULL)
+                free_key(temp->key);
+
+            if(free_data != NULL)
+                free_data(temp->data);
+
             free(temp);
         }
     }
