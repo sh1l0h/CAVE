@@ -5,12 +5,9 @@
 
 typedef struct CyclicQueue {
     u8 *data;
-
     u64 start;
-    u64 end;
     u64 allocated_elements;
-
-    u32 element_size;
+    u64 element_size;
     u64 size;
 } CyclicQueue;
 

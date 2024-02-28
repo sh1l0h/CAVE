@@ -47,7 +47,8 @@ typedef struct HashMap {
 void hashmap_create(HashMap *hm, u64 initial_size,
                     u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg),
                     f32 load_factor);
-void hashmap_destroy(HashMap *hm);
+
+void hashmap_destroy(HashMap *hm, void (*free_key)(void *), void (*free_data)(void *));
 
 void hashmap_add(HashMap *hm, void *key, void *element);
 void *hashmap_get(HashMap *hm, const void *key);
