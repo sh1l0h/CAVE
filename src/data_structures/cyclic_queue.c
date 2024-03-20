@@ -28,10 +28,17 @@ void cyclic_queue_copy(CyclicQueue *queue, u64 index, void *dest)
 
 void cyclic_queue_resize(CyclicQueue *queue, u64 new_size)
 {
-    u64 end = (queue->start + queue->size) % queue->allocated_elements;
-    u8 *new_data = malloc(new_size * queue->allocated_elements * sizeof(u8));
+    if (queue->size == 0) {
+        queue->data = realloc(queue->data, 
+                new_size * queue->element_size * sizeof(u8));
+        queue->allocated_elements = new_size;
+        return;
+    }
 
-    if (end < queue->start) {
+    u64 end = (queue->start + queue->size) % queue->allocated_elements;
+    u8 *new_data = malloc(new_size * queue->element_size * sizeof(u8));
+
+    if (end <= queue->start) {
         size_t elements_to_end = queue->allocated_elements - queue->start;
         memcpy(new_data,
                queue->data + queue->start * queue->element_size,
@@ -48,6 +55,7 @@ void cyclic_queue_resize(CyclicQueue *queue, u64 new_size)
     queue->start = 0;
     free(queue->data);
     queue->data = new_data;
+    queue->allocated_elements = new_size;
 }
 
 void cyclic_queue_enqueue(CyclicQueue *queue, void *element)
