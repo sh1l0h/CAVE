@@ -8,6 +8,6 @@
 - [x] Ambient occlusion 
 - [ ] Multithreaded flood-fill lighting
 - [x] Fast ECS
-- [ ] Physics
+- [x] Physics
 - [ ] UI
 - [ ] Item system
