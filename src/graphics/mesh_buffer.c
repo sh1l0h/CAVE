@@ -9,7 +9,8 @@ void mesh_buffer_create(MeshBuffer *mb, u32 initial_size)
 
 void mesh_buffer_destroy(const MeshBuffer *mb)
 {
-    free(mb->data);
+    if (mb != NULL)
+        free(mb->data);
 }
 
 void mesh_buffer_clean(MeshBuffer *mb)

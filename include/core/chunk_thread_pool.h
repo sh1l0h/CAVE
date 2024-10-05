@@ -1,28 +1,35 @@
 #ifndef CAVE_CHUNK_THREAD_POOL_H
 #define CAVE_CHUNK_THREAD_POOL_H
 
-#include "../util.h"
-#include "../data_structures/array_list.h"
+#include "util.h"
+#include "data_structures/array_list.h"
+#include "graphics/mesh.h"
 #include <SDL2/SDL_thread.h>
 
-#define CHUNK_THREAD_COUNT 4
+#define CHUNK_THREAD_COUNT 3
 
 typedef enum ChunkThreadTaskType {
-    TASK_GEN_COLUMN,
-    TASK_MESH_CHUNK
+    TT_GENERATE,
+    TT_MESH
 } ChunkTreadTaskType;
 
 typedef struct ChunkThreadTask {
     ChunkTreadTaskType type;
-    void *arg;
+    SDL_atomic_t is_done;
+    SDL_atomic_t ref_counter;
+
+    Vec3i chunk_pos;
+    union {
+        struct {
+            u64 time;
+            struct ChunkBlockData *block_data[27];
+            Mesh result;
+        } mesh;
+        struct ChunkBlockData *gen_res;
+    };
+
     struct ChunkThreadTask *next;
 } ChunkThreadTask;
-
-struct ChunkThreadResult {
-    ChunkTreadTaskType type;
-    void *arg;
-    void *result;
-};
 
 typedef struct ChunkThreadPool {
     SDL_Thread *threads[CHUNK_THREAD_COUNT];
@@ -38,16 +45,16 @@ typedef struct ChunkThreadPool {
     SDL_cond *cond_work;
     bool stop;
 
-    SDL_mutex *results_mutex;
-    ArrayList results;
 } ChunkThreadPool;
 
 extern ChunkThreadPool *chunk_thread_pool;
 
+ChunkThreadTask *chunk_thread_task_alloc(ChunkTreadTaskType type);
+void chunk_thread_task_free(ChunkThreadTask *task);
+bool chunk_thread_task_is_done(ChunkThreadTask *task);
+
 void chunk_thread_pool_init();
 void chunk_thread_pool_deinit();
-
-void chunk_thread_pool_apply_results();
 
 void chunk_thread_pool_add_task(ChunkThreadTask *task);
 void chunk_thread_pool_wait();

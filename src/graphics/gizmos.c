@@ -8,14 +8,14 @@ void gizmos_init()
 {
     f32 cube_verts[] = {
         -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f, 1.0f,
-            -1.0f, 1.0f, -1.0f,
-            -1.0f, 1.0f, 1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, 1.0f,
-            1.0f, 1.0f, -1.0f,
-            1.0f, 1.0f, 1.0f,
-        };
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, 1.0f,
+    };
 
     u8 cube_indices[] = {
         0, 4, 4, 6, 6, 2, 2, 0,
@@ -46,7 +46,7 @@ void gizmos_init()
     gizmos.model_uniform = glGetUniformLocation(gizmos.shader.program, "model");
     gizmos.view_uniform = glGetUniformLocation(gizmos.shader.program, "view");
     gizmos.projection_uniform = glGetUniformLocation(gizmos.shader.program,
-                                "projection");
+                                                     "projection");
     gizmos.color_uniform = glGetUniformLocation(gizmos.shader.program, "color");
 }
 
@@ -91,6 +91,7 @@ void gizmos_draw_cube(Vec3 *position, Vec3 *scale)
 void gizmos_draw()
 {
     gizmos_begin();
+    glDisable(GL_DEPTH_TEST);
 
     HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
     HashMap *colliders = &ecs->archetype_component_table[CMP_BoxCollider];
@@ -102,10 +103,8 @@ void gizmos_draw()
         if(transform_record == NULL) continue;
 
         for(u64 i = 0; i < archetype->entities.size; i++) {
-            BoxCollider *collider = array_list_offset(
-                                        &archetype->components[collider_record->index], i);
-            Transform *transform = array_list_offset(
-                                       &archetype->components[transform_record->index], i);
+            BoxCollider *collider = array_list_offset(&archetype->components[collider_record->index], i);
+            Transform *transform = array_list_offset(&archetype->components[transform_record->index], i);
 
             Vec3 collider_center;
             zinc_vec3_add(&transform->position, &collider->offset, &collider_center);
@@ -113,4 +112,5 @@ void gizmos_draw()
             gizmos_draw_cube(&collider_center, &collider->half_size);
         }
     }
+    glEnable(GL_DEPTH_TEST);
 }

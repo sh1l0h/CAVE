@@ -4,7 +4,7 @@ void direction_get_norm(Direction dir, Vec3i *dest)
 {
     zinc_vec3i_zero(dest);
 
-    switch(dir) {
+    switch (dir) {
 
     case DIR_NORTH:
         dest->z += 1;

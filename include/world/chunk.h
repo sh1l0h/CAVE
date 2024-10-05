@@ -1,12 +1,13 @@
 #ifndef CAVE_CHUNK_H
 #define CAVE_CHUNK_H
 
+#include "util.h"
+#include "graphics/mesh.h"
+#include "graphics/shader.h"
+#include "core/chunk_thread_pool.h"
+
 #include <GL/glew.h>
 #include <GL/gl.h>
-
-#include "../util.h"
-#include "../graphics/mesh.h"
-#include "../graphics/shader.h"
 
 #define CHUNK_SIZE 16
 #define CHUNK_VOLUME (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
@@ -31,14 +32,9 @@
 
 struct ChunkBlockData {
     u64 owner_count;
-    u16 data[];
-};
-
-struct ChunkMeshArg {
-    u32 mesh_time;
-    Vec3i chunk_pos;
-    // 3D array of chunk block data
-    struct ChunkBlockData *block_data[27];
+    // Number of non-air blocks
+    u16 block_count;
+    u16 data[CHUNK_VOLUME];
 };
 
 typedef struct Chunk {
@@ -52,14 +48,16 @@ typedef struct Chunk {
     // [0;7]  - Block id
     struct ChunkBlockData *block_data;
 
-    // Number of non-air blocks
-    u16 block_count;
+    ChunkThreadTask *task;
 
     // If true, the chuck needs to be remeshed
     bool is_dirty;
 
     // Time when the current mesh was tasked to generate
-    u32 mesh_time;
+    u64 mesh_time;
+
+    // Time when this chunk was rendered last time
+    u64 render_time;
 
     bool has_buffers;
 
@@ -85,7 +83,7 @@ i32 chunk_manager_init();
 
 void chunk_manager_deinit();
 
-struct ChunkBlockData *chunk_block_data_allocate();
+struct ChunkBlockData *chunk_block_data_alloc();
 
 void chunk_create(Chunk *chunk, const Vec3i *pos);
 
@@ -96,9 +94,9 @@ void chunk_destroy(Chunk *chunk);
 
 void chunk_update(Chunk *chunk);
 
-Mesh *chunk_mesh(struct ChunkMeshArg *arg);
+void chunk_mesh(ChunkThreadTask *task);
 
-void chunk_render(Chunk *chunk);
+void chunk_render(Chunk *chunk, const u64 render_time);
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block);
 

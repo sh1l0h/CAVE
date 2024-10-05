@@ -7,9 +7,10 @@ void transform_update()
     ArchetypeRecord *record;
     hashmap_foreach_data(entities, record) {
         Archetype *archetype = record->archetype;
-        for(u64 j = 0; j < archetype->entities.size; j++) {
-            Transform *transform = array_list_offset(&archetype->components[record->index],
-                                   j);
+        ArrayList *transform_components = 
+            &archetype->components[record->index];
+        for (u64 j = 0; j < archetype->entities.size; j++) {
+            Transform *transform = array_list_offset(transform_components, j);
             f32 c_x = cosf(transform->rotation.x);
             f32 s_x = sinf(transform->rotation.x);
             f32 c_y = cosf(transform->rotation.y);

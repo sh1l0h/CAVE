@@ -4,15 +4,15 @@
 #include <SDL2/SDL_opengl.h>
 #include <time.h>
 
-#include "../include/core/chunk_thread_pool.h"
-#include "../include/core/mouse.h"
-#include "../include/core/keyboard.h"
-#include "../include/graphics/gizmos.h"
-#include "../include/graphics/texture_manager.h"
-#include "../include/world/world.h"
-#include "../include/world/block.h"
-#include "../include/ecs/systems.h"
-#include "../include/ecs/ecs.h"
+#include "core/chunk_thread_pool.h"
+#include "core/mouse.h"
+#include "core/keyboard.h"
+#include "graphics/gizmos.h"
+#include "graphics/texture_manager.h"
+#include "world/world.h"
+#include "world/block.h"
+#include "ecs/systems.h"
+#include "ecs/ecs.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"
@@ -46,27 +46,27 @@ int main()
 
     SDL_GLContext context = NULL;
 
-    if(window == NULL) {
+    if (window == NULL) {
         log_fatal("Failed to create window: %s", SDL_GetError());
         goto End;
     }
     log_debug("Window created");
 
     context = SDL_GL_CreateContext(window);
-    if(context == NULL) {
+    if (context == NULL) {
         log_fatal("Failed to create OpenGL context: %s", SDL_GetError());
         goto End;
     }
     log_debug("OpenGL context created");
 
     GLenum err = glewInit();
-    if(err != GLEW_OK) {
+    if (err != GLEW_OK) {
         log_fatal("Failed to initialize GLEW: %s", glewGetErrorString(err));
         goto End;
     }
     log_debug("GLEW initialized");
 
-    if(SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0) {
+    if (SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH) < 0) {
         log_warn("Failed to set the main thread prioriy to high: %s",
                  SDL_GetError());
     }
@@ -84,12 +84,12 @@ int main()
     ecs_init();
     cmp_init();
 
-    Vec3 player_initial_pos = {{0.0f, 300.0f, 0.0f}};
+    Vec3 player_initial_pos = {{0.0f, 200.0f, 0.0f}};
     player_create(&player_initial_pos);
 
     chunk_manager_init();
 
-    if(keyboard_init())
+    if (keyboard_init())
         goto End;
 
     chunk_thread_pool_init();
@@ -115,7 +115,7 @@ int main()
     u32 frame_count = 0;
 
     bool quit = false;
-    while(!quit) {
+    while (!quit) {
         u32 curr_time = SDL_GetTicks();
         u32 delta_time = curr_time - last_time;
         last_time = curr_time;
@@ -126,7 +126,7 @@ int main()
         keyboard_update_previous();
 
         SDL_Event event;
-        while(SDL_PollEvent(&event)) {
+        while (SDL_PollEvent(&event)) {
             switch(event.type) {
 
             case SDL_WINDOWEVENT:
@@ -157,12 +157,12 @@ int main()
             }
         }
 
-        if(keyboard_did_key_go_down(KEY_SHOW_GIZMOS))
+        if (keyboard_did_key_go_down(KEY_SHOW_GIZMOS))
             show_gizmos = !show_gizmos;
         mouse_update();
 
         // Fixed time update
-        while(time_to_process >= ms_per_update) {
+        while (time_to_process >= ms_per_update) {
             player_update_movement(FIXED_DELTA_TIME);
             rigidbody_update(FIXED_DELTA_TIME);
             time_to_process -= ms_per_update;
@@ -174,7 +174,6 @@ int main()
         camera_update();
 
         world_update();
-        chunk_thread_pool_apply_results();
 
         // Render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -182,13 +181,14 @@ int main()
 
         frame_count++;
 
-        if(second_count >= 1000) {
+        if (second_count >= 1000) {
             log_info("FPS: %f", frame_count * 1000.0f / second_count);
             second_count = 0;
             frame_count = 0;
         }
 
-        if(show_gizmos) gizmos_draw();
+        if (show_gizmos) 
+            gizmos_draw();
 
         SDL_GL_SwapWindow(window);
 
@@ -201,7 +201,7 @@ End:
 
     world_destroy();
 
-    if(chunk_thread_pool != NULL) {
+    if (chunk_thread_pool != NULL) {
         chunk_thread_pool_wait();
         chunk_thread_pool_stop();
         chunk_thread_pool_deinit();
@@ -211,10 +211,10 @@ End:
 
     chunk_manager_deinit();
 
-    if(context != NULL)
+    if (context != NULL)
         SDL_GL_DeleteContext(context);
 
-    if(window != NULL)
+    if (window != NULL)
         SDL_DestroyWindow(window);
 
     SDL_Quit();

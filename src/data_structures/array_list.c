@@ -17,13 +17,14 @@ void array_list_set(ArrayList *list, u64 index, const void *element)
 {
     void *indexed_element = list->data + index * list->element_size;
 
-    if(element != NULL) memcpy(indexed_element, element, list->element_size);
+    if (element != NULL) 
+        memcpy(indexed_element, element, list->element_size);
     else memset(indexed_element, 0, list->element_size);
 }
 
 void *array_list_offset(ArrayList *list, u64 index)
 {
-    if(index >= list->size) {
+    if (index >= list->size) {
         log_error("Arraylist index out of bounds: Index: %d, Size: %d", index,
                   list->size);
         return NULL;
@@ -34,17 +35,20 @@ void *array_list_offset(ArrayList *list, u64 index)
 
 void array_list_remove(ArrayList *list, u64 index, void (*free_element)(void *))
 {
-    if(index >= list->size) {
+    if (index >= list->size) {
         log_error("Arraylist index out of bounds: Index: %d, Size: %d", index,
                   list->size);
         return;
     }
 
     list->size--;
-    if(list->size == index) return;
+    if (list->size == index) 
+        return;
 
     void *element = array_list_offset(list, index);
-    if(free_element) free_element(element);
+    if (free_element) 
+        free_element(element);
+
     void *next_element = array_list_offset(list, index + 1);
     memmove(element, next_element, list->element_size * (list->size - index));
 }
@@ -52,19 +56,21 @@ void array_list_remove(ArrayList *list, u64 index, void (*free_element)(void *))
 void array_list_unordered_remove(ArrayList *list, u64 index,
                                  void (*free_element)(void *))
 {
-    if(index >= list->size) {
+    if (index >= list->size) {
         log_error("Arraylist index out of bounds: Index: %d, Size: %d", index,
                   list->size);
         return;
     }
 
-    if(index == list->size - 1) {
+    if (index == list->size - 1) {
         list->size--;
         return;
     }
 
     void *element_to_remove = array_list_offset(list, index);
-    if(free_element) free_element(element_to_remove);
+    if (free_element) 
+        free_element(element_to_remove);
+
     void *last_element = array_list_offset(list, list->size - 1);
     memcpy(element_to_remove, last_element, list->element_size);
     list->size--;
@@ -75,10 +81,12 @@ void *array_list_append(ArrayList *list, const void *element)
     void *new_element = list->data + list->size * list->element_size;
     list->size++;
 
-    if(element != NULL) memcpy(new_element, element, list->element_size);
-    else memset(new_element, 0, list->element_size);
+    if (element != NULL)
+        memcpy(new_element, element, list->element_size);
+    else 
+        memset(new_element, 0, list->element_size);
 
-    if(list->size >= list->allocated_bytes / list->element_size)
+    if (list->size >= list->allocated_bytes / list->element_size)
         list->data = realloc(list->data, list->allocated_bytes *= 2);
 
     return new_element;

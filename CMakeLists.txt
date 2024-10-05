@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 3.12)
 project(CAVE LANGUAGES C)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE) 
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release)" FORCE)
 endif()
+
+include_directories(include lib)
 
 add_subdirectory(lib/ZINC)
 
@@ -42,7 +46,8 @@ add_executable(${PROJECT_NAME}
     src/data_structures/hash_map.c
     src/data_structures/linked_list.c
     src/data_structures/array_list.c
-    src/data_structures/cyclic_queue.c)
+    src/data_structures/cyclic_queue.c
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ZINC
@@ -50,12 +55,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${OPENGL_LIBRARIES}
     ${GLEW_LIBRARIES} 
     ${FREETYPE_LIBRARIES}
-    m)
+    m
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${FREETYPE_INCLUDE_DIRS})
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
-
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -67,4 +72,3 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(${PROJECT_NAME} PRIVATE -O3)
 endif()
-

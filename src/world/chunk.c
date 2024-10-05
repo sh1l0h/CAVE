@@ -1,8 +1,8 @@
-#include "../../include/world/chunk.h"
-#include "../../include/world/world.h"
-#include "../../include/core/chunk_thread_pool.h"
-#include "../../include/world/block.h"
-#include "../../include/ecs/ecs.h"
+#include "world/chunk.h"
+#include "world/world.h"
+#include "core/chunk_thread_pool.h"
+#include "world/block.h"
+#include "ecs/ecs.h"
 #include <SDL2/SDL.h>
 
 #define DATA_X_OFFSET 0u
@@ -169,7 +169,7 @@ i32 chunk_manager_init()
     i32 shader_fail = shader_create(&chunk_manager->shader,
                                     "./res/shaders/chunk.vert",
                                     "./res/shaders/chunk.frag");
-    if(shader_fail)
+    if (shader_fail)
         return 1;
 
     chunk_manager->model_uniform =
@@ -201,17 +201,16 @@ i32 chunk_manager_init()
 
 void chunk_manager_deinit()
 {
-    if(chunk_manager == NULL)
+    if (chunk_manager == NULL)
         return;
 
     shader_destroy(&chunk_manager->shader);
     free(chunk_manager);
 }
 
-inline struct ChunkBlockData *chunk_block_data_allocate()
+inline struct ChunkBlockData *chunk_block_data_alloc()
 {
-    struct ChunkBlockData *result = calloc(1,
-                                           sizeof(*result) + CHUNK_VOLUME * sizeof(u16));
+    struct ChunkBlockData *result = calloc(1, sizeof(*result));
     result->owner_count = 1;
     return result;
 }
@@ -219,21 +218,17 @@ inline struct ChunkBlockData *chunk_block_data_allocate()
 void chunk_create(Chunk *chunk, const Vec3i *pos)
 {
     chunk->mesh_time = 0;
+    chunk->render_time = 0;
+    chunk->block_data = NULL;
+    chunk->is_dirty = true;
+    chunk->has_buffers = false;
 
     zinc_vec3i_copy(pos, &chunk->position);
 
-    chunk->center = (Vec3) {
-        {
-            CHUNK_SIZE * (chunk->position.x + 0.5f),
-                       CHUNK_SIZE * (chunk->position.y + 0.5f),
-                       CHUNK_SIZE * (chunk->position.z + 0.5f)
-        }
-    };
+    chunk->center = ZINC_VEC3(CHUNK_SIZE * (chunk->position.x + 0.5f),
+                              CHUNK_SIZE * (chunk->position.y + 0.5f),
+                              CHUNK_SIZE * (chunk->position.z + 0.5f));
 
-    chunk->block_data = chunk_block_data_allocate();
-
-    chunk->block_count = 0;
-    chunk->is_dirty = true;
 
     chunk->index_count = 0;
 }
@@ -246,7 +241,8 @@ void chunk_init_buffers(Chunk *chunk)
     glGenBuffers(1, &chunk->VBO);
     glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
 
-    glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, 2 * sizeof(GLuint), (void *)0);
+    glVertexAttribIPointer(0, 1, GL_UNSIGNED_INT, 
+                           2 * sizeof(GLuint), (void *)0);
     glEnableVertexAttribArray(0);
     glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, 2 * sizeof(GLuint),
                            (void *)sizeof(GLuint));
@@ -260,11 +256,12 @@ void chunk_init_buffers(Chunk *chunk)
 
 void chunk_destroy(Chunk *chunk)
 {
-    if(chunk == NULL) return;
-    if(chunk->block_data != NULL && chunk->block_data->owner_count == 1)
+    if (chunk == NULL) 
+        return;
+    if (chunk->block_data != NULL && chunk->block_data->owner_count == 1)
         free(chunk->block_data);
 
-    if(chunk->has_buffers) {
+    if (chunk->has_buffers) {
         glDeleteBuffers(1, &chunk->VBO);
         glDeleteBuffers(1, &chunk->IBO);
         glDeleteVertexArrays(1, &chunk->VAO);
@@ -279,7 +276,7 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
     u32 origin_y = pos->y + direction_offset[direction * 3 + 1];
     u32 origin_z = pos->z + direction_offset[direction * 3 + 2];
 
-    for(u32 i = 0; i < 4; i++) {
+    for (u32 i = 0; i < 4; i++) {
         Vec3i *offset = (Vec3i *)(vertex_offsets + direction * 12 + 3 * i);
 
         u32 x = (origin_x + offset->x) * 16;
@@ -289,7 +286,7 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
         u32 v = uv_offset[i * 2 + 1];
 
         u32 brightness = 0;
-        switch(direction) {
+        switch (direction) {
         case DIR_TOP:
             brightness = 15;
             break;
@@ -307,7 +304,7 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
 
         u32 ao = 3;
 
-        if(!neighboring_blocks[i * 2] || !neighboring_blocks[i * 2 + 2])
+        if (!neighboring_blocks[i * 2] || !neighboring_blocks[i * 2 + 2])
             ao = 7 - neighboring_blocks[i * 2] - neighboring_blocks[i * 2 + 1] -
                  neighboring_blocks[i * 2 + 2];
 
@@ -338,49 +335,52 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
     mesh->index_count += 6;
 }
 
-static u16 chunk_mesh_arg_get_block(struct ChunkMeshArg *arg,
+static u16 chunk_mesh_task_get_block(ChunkThreadTask *task,
                                     const Vec3i *offset)
 {
 
-    Vec3i chunk_position = BLOCK_2_CHUNK(*offset);
-    Vec3i block_offset = {{
-            (offset->x + CHUNK_SIZE) % CHUNK_SIZE,
-            (offset->y + CHUNK_SIZE) % CHUNK_SIZE,
-            (offset->z + CHUNK_SIZE) % CHUNK_SIZE,
-        }
-    };
+    Vec3i chunk_position = BLOCK_2_CHUNK(offset);
+    Vec3i block_offset = ZINC_VEC3I_INIT((offset->x + CHUNK_SIZE) % CHUNK_SIZE,
+                                         (offset->y + CHUNK_SIZE) % CHUNK_SIZE,
+                                         (offset->z + CHUNK_SIZE) % CHUNK_SIZE);
 
     u8 index = (chunk_position.y + 1) + (chunk_position.x + 1) * 3 +
                (chunk_position.z + 1) * 9;
-    struct ChunkBlockData *block_data = arg->block_data[index];
-    if(block_data == NULL) return BLOCK_STONE;
+    struct ChunkBlockData *block_data = task->mesh.block_data[index];
+    if (block_data == NULL)
+        return BLOCK_STONE;
 
     return block_data->data[CHUNK_OFFSET_2_INDEX(block_offset)];
 }
 
-Mesh *chunk_mesh(struct ChunkMeshArg *arg)
+void chunk_mesh(ChunkThreadTask *task)
 {
-    Mesh *result = malloc(sizeof(Mesh));
-
-    mesh_create(result);
+    if (task->mesh.block_data[13] == NULL) {
+        log_error("ye");
+        return;
+    }
+    mesh_create(&task->mesh.result);
 
     for(i32 z = 0; z < CHUNK_SIZE; z++) {
         for(i32 y = 0; y < CHUNK_SIZE; y++) {
             for(i32 x = 0; x < CHUNK_SIZE; x++) {
 
                 Vec3i offset = {{x, y, z}};
-                u32 data = chunk_mesh_arg_get_block(arg, &offset);
+                u32 data = chunk_mesh_task_get_block(task, &offset);
                 u16 id = data & BLOCK_ID_MASK;
 
-                if(id == BLOCK_AIR) continue;
+                if (id == BLOCK_AIR)
+                    continue;
 
                 for(i32 dir = 0; dir < 6; dir++) {
                     Vec3i facing_block_pos;
                     direction_get_norm(dir, &facing_block_pos);
                     zinc_vec3i_add(&facing_block_pos, &offset, &facing_block_pos);
 
-                    u16 block_id = chunk_mesh_arg_get_block(arg, &facing_block_pos);
-                    if(!blocks[block_id].is_transparent) continue;
+                    u16 block_id = chunk_mesh_task_get_block(task,
+                                                             &facing_block_pos);
+                    if (!blocks[block_id].is_transparent)
+                        continue;
 
                     u8 neighboring_blocks[9];
 
@@ -389,77 +389,115 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
                         Vec3i block_pos;
                         zinc_vec3i_add(block_offset, &offset, &block_pos);
 
-                        u16 block_id = chunk_mesh_arg_get_block(arg, &block_pos);
+                        u16 block_id = chunk_mesh_task_get_block(task, &block_pos);
                         neighboring_blocks[i] = !blocks[block_id].is_transparent;
                     }
 
                     neighboring_blocks[8] = neighboring_blocks[0];
 
-                    chunk_append_face(result, &offset, dir, blocks[id].textures[dir],
+                    chunk_append_face(&task->mesh.result,
+                                      &offset, dir, blocks[id].textures[dir],
                                       neighboring_blocks);
                 }
             }
         }
     }
-
-    return result;
 }
 
-static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
+static ChunkThreadTask *chunk_mesh_task_create(Chunk *chunk)
 {
-    struct ChunkMeshArg *arg = calloc(1, sizeof(struct ChunkMeshArg));
-    arg->mesh_time = SDL_GetTicks();
-
-    zinc_vec3i_copy(&chunk->position, &arg->chunk_pos);
+    ChunkThreadTask *task = chunk_thread_task_alloc(TT_MESH);
+    task->mesh.time = SDL_GetTicks64();
+    zinc_vec3i_copy(&chunk->position, &task->chunk_pos);
 
     for(i32 z = -1; z <= 1; z++) {
         for(i32 x = -1; x <= 1; x++) {
             for(i32 y = -1; y <= 1; y++) {
 
-                Vec3i pos = {{
-                        x + chunk->position.x,
-                        y + chunk->position.y,
-                        z + chunk->position.z
-                    }
-                };
+                Vec3i pos = ZINC_VEC3I_INIT(x + chunk->position.x,
+                                            y + chunk->position.y,
+                                            z + chunk->position.z);
 
                 Chunk *chunk = world_get_chunk(&pos);
 
-                if(chunk == NULL)
+                if (chunk == NULL || chunk->block_data == NULL)
                     continue;
-                chunk->block_data->owner_count++;
 
+                chunk->block_data->owner_count++;
                 u8 index = (y + 1) + (x + 1) * 3 + (z + 1) * 9;
-                arg->block_data[index] = chunk->block_data;
+                task->mesh.block_data[index] = chunk->block_data;
             }
         }
     }
 
-    return arg;
+    return task;
 }
 
-
-void chunk_render(Chunk *chunk)
+void chunk_update(Chunk *chunk)
 {
-    if(!chunk)
+    if (chunk == NULL) {
+        log_error("chunk_update was called on NULL");
         return;
-
-    if(chunk->block_count == 0)
-        return;
-
-    if(chunk->is_dirty) {
-        struct ChunkMeshArg *arg = chunk_mesh_arg_create(chunk);
-
-        ChunkThreadTask *task = malloc(sizeof(ChunkThreadTask));
-        task->type = TASK_MESH_CHUNK;
-        task->arg = arg;
-
-        chunk_thread_pool_add_task(task);
-
-        chunk->is_dirty = false;
     }
 
-    if(chunk->index_count == 0) return;
+}
+
+void chunk_render(Chunk *chunk, const u64 render_time)
+{
+    if (chunk == NULL) {
+        log_error("chunk_render was called on NULL");
+        return;
+    }
+
+    chunk->render_time = render_time;
+
+    if (chunk->is_dirty && chunk->block_data != NULL) {
+        if (chunk->task != NULL && chunk->task->type == TT_MESH) {
+            chunk_thread_task_free(chunk->task);
+            chunk->task = NULL;
+        }
+        if (chunk->task == NULL) {
+            chunk->task = chunk_mesh_task_create(chunk);
+            chunk_thread_pool_add_task(chunk->task);
+            chunk->is_dirty = false;
+        }
+    }
+    
+    if (chunk->task != NULL && chunk_thread_task_is_done(chunk->task)) {
+        switch (chunk->task->type) {
+        case TT_MESH:
+            if (chunk->mesh_time > chunk->task->mesh.time)
+                break;
+
+            if (!chunk->has_buffers)
+                chunk_init_buffers(chunk);
+
+            chunk->mesh_time = chunk->task->mesh.time;
+            glBindVertexArray(chunk->VAO);
+            glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
+            glBufferData(GL_ARRAY_BUFFER,
+                         chunk->task->mesh.result.vert_buffer.index,
+                         chunk->task->mesh.result.vert_buffer.data,
+                         GL_DYNAMIC_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                         chunk->task->mesh.result.index_buffer.index,
+                         chunk->task->mesh.result.index_buffer.data,
+                         GL_DYNAMIC_DRAW);
+            chunk->index_count = chunk->task->mesh.result.index_count;
+            break;
+
+        case TT_GENERATE:
+            chunk->block_data = chunk->task->gen_res;
+            chunk->task->gen_res = NULL;
+            break;
+        }
+        chunk_thread_task_free(chunk->task);
+        chunk->task = NULL;
+    }
+
+    if (!chunk->has_buffers || chunk->index_count == 0)
+        return;
 
     Transform *player_transform =
         ecs_get_component(ecs->player_id, CMP_Transform);
@@ -472,36 +510,39 @@ void chunk_render(Chunk *chunk)
     f32 projection_on_z =
         zinc_vec3_dot(&player_transform->forward, &chunk_center);
 
-    if(projection_on_z + chunk_manager->bounding_radius < camera->near ||
-            projection_on_z - chunk_manager->bounding_radius > camera->far)
+    if (projection_on_z + chunk_manager->bounding_radius < camera->near ||
+        projection_on_z - chunk_manager->bounding_radius > camera->far)
         return;
 
     f32 h = chunk_manager->tan_half_fov * projection_on_z;
 
     f32 projection_on_y = zinc_vec3_dot(&player_transform->up, &chunk_center);
 
-    if(projection_on_y < 0.0f)
+    if (projection_on_y < 0.0f)
         projection_on_y *= -1;
 
-    if(projection_on_y > chunk_manager->radius_over_cos_half_fov + h)
+    if (projection_on_y > chunk_manager->radius_over_cos_half_fov + h)
         return;
 
     h *= camera->aspect_ratio;
-    f32 projection_on_x = zinc_vec3_dot(&player_transform->right, &chunk_center);
-    if(projection_on_x < 0)
+    f32 projection_on_x = 
+        zinc_vec3_dot(&player_transform->right, &chunk_center);
+    if (projection_on_x < 0)
         projection_on_x *= -1;
 
-    if(projection_on_x > chunk_manager->radius_over_cos_atan + h)
+    if (projection_on_x > chunk_manager->radius_over_cos_atan + h)
         return;
 
     glBindVertexArray(chunk->VAO);
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        log_error("%d, %s", (int)err, glewGetErrorString(err));
+        return;
+    }
 
-    Vec3 pos = {{
-            chunk->position.x * CHUNK_SIZE,
-            chunk->position.y * CHUNK_SIZE,
-            chunk->position.z *CHUNK_SIZE
-        }
-    };
+    Vec3 pos = ZINC_VEC3_INIT(chunk->position.x * CHUNK_SIZE,
+                              chunk->position.y * CHUNK_SIZE,
+                              chunk->position.z *CHUNK_SIZE);
 
     Mat4 model;
     zinc_translate(model, &pos);
@@ -516,8 +557,8 @@ void chunk_render(Chunk *chunk)
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 {
-    if(chunk->block_data->owner_count > 1) {
-        struct ChunkBlockData *new_block_data = chunk_block_data_allocate();
+    if (chunk->block_data->owner_count > 1) {
+        struct ChunkBlockData *new_block_data = chunk_block_data_alloc();
         memcpy(new_block_data->data,
                chunk->block_data->data,
                CHUNK_VOLUME * sizeof(u16));
@@ -526,69 +567,47 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
         chunk->block_data = new_block_data;
     }
 
-    if(block == BLOCK_AIR) chunk->block_count--;
-    else if(chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR)
-        chunk->block_count++;
+    if (block == BLOCK_AIR) 
+        chunk->block_data->block_count--;
+    else if (chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR)
+        chunk->block_data->block_count++;
 
     chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
     chunk->is_dirty = true;
 
-    if(CHUNK_ON_BOUNDS(*pos)) {
+    if (CHUNK_ON_BOUNDS(*pos)) {
         Chunk *neighbors[3] = {NULL, NULL, NULL};
 
         Vec3i tmp;
         u32 index = 0;
-        if(pos->x == 0) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    -1, 0, 0
-                    }
-            }, &chunk->position, &tmp);
+        if (pos->x == 0) {
+            zinc_vec3i_add(&ZINC_VEC3I(-1, 0, 0), &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        else if(pos->x == CHUNK_SIZE - 1) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    1, 0, 0
-                }
-            }, &chunk->position, &tmp);
+        else if (pos->x == CHUNK_SIZE - 1) {
+            zinc_vec3i_add(&ZINC_VEC3I(1, 0, 0), &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        if(pos->y == 0) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, -1, 0
-                }
-            }, &chunk->position, &tmp);
+        if (pos->y == 0) {
+            zinc_vec3i_add(&ZINC_VEC3I(0, -1, 0), &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        else if(pos->y == CHUNK_SIZE - 1) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, 1, 0
-                }
-            }, &chunk->position, &tmp);
+        else if (pos->y == CHUNK_SIZE - 1) {
+            zinc_vec3i_add(&ZINC_VEC3I(0, 1, 0), &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        if(pos->z == 0) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, 0, -1
-                }
-            }, &chunk->position, &tmp);
+        if (pos->z == 0) {
+            zinc_vec3i_add(&ZINC_VEC3I(0, 0, -1), &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        else if(pos->z == CHUNK_SIZE - 1) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, 0, 1
-                }
-            }, &chunk->position, &tmp);
+        else if (pos->z == CHUNK_SIZE - 1) {
+            zinc_vec3i_add(&ZINC_VEC3I(0, 0, 1), &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
 
         for(i32 i = 0; i < 3; i++) {
-            if(neighbors[i]) neighbors[i]->is_dirty = true;
+            if (neighbors[i]) 
+                neighbors[i]->is_dirty = true;
         }
     }
 }

@@ -33,6 +33,7 @@ void log_print(i32 type, const char *file, i32 line, const char *format, ...)
     FILE *stream = type < 2 ? stdout : stderr;
 
     SDL_LockMutex(log_mutex);
+
     fprintf(stream, "\e[0;32m[%s]\e[0m %s (line %d) %s%s\e[0m:\n",
             time_buffer,
             file,
@@ -41,8 +42,9 @@ void log_print(i32 type, const char *file, i32 line, const char *format, ...)
             type_strings[type]);
     vfprintf(stream, format, args);
     fprintf(stream, "\n");
-    SDL_UnlockMutex(log_mutex);
-    fflush(stdout);
 
+    SDL_UnlockMutex(log_mutex);
+
+    fflush(stdout);
     va_end(args);
 }

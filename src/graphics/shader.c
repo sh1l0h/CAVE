@@ -7,7 +7,7 @@ static i32 shader_compile(const char *shader_path, GLenum type, GLuint *shader)
     u64 src_len;
     char *src = read_text_from_file(shader_path, &src_len);
 
-    if(!src) {
+    if (!src) {
         log_fatal("Failed to read shader from %s", shader_path);
         return 1;
     }
@@ -21,7 +21,7 @@ static i32 shader_compile(const char *shader_path, GLenum type, GLuint *shader)
     GLint is_compiled;
     glGetShaderiv(*shader, GL_COMPILE_STATUS, &is_compiled);
 
-    if(!is_compiled) {
+    if (!is_compiled) {
         GLint max_len = 0;
         glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &max_len);
 
@@ -44,10 +44,12 @@ i32 shader_create(Shader *shader, const char *vert_shader_path,
                   const char *frag_shader_path)
 {
     GLuint vert_shader;
-    if(shader_compile(vert_shader_path, GL_VERTEX_SHADER, &vert_shader)) return 1;
+    if (shader_compile(vert_shader_path, GL_VERTEX_SHADER, &vert_shader)) 
+        return 1;
 
     GLuint frag_shader;
-    if(shader_compile(frag_shader_path, GL_FRAGMENT_SHADER, &frag_shader)) return 1;
+    if (shader_compile(frag_shader_path, GL_FRAGMENT_SHADER, &frag_shader)) 
+        return 1;
 
     GLuint program = glCreateProgram();
 
@@ -58,7 +60,7 @@ i32 shader_create(Shader *shader, const char *vert_shader_path,
 
     GLint is_linked;
     glGetProgramiv(program, GL_LINK_STATUS, &is_linked);
-    if(!is_linked) {
+    if (!is_linked) {
         GLint max_len = 0;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &max_len);
 
