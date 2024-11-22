@@ -3,3 +3,5 @@
 
 #Build directory
 build
+
+.ccls-cache/
