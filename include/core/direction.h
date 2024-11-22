@@ -11,7 +11,7 @@ typedef enum Direction {
     DIR_TOP,
     DIR_BOTTOM,
 
-    DIR_NULL
+    DIR_COUNT
 } Direction;
 
 void direction_get_norm(Direction dir, Vec3i *dest);
