@@ -4,23 +4,21 @@
 #include "../util.h"
 #include "../world/chunk.h"
 
-#define CMP_ADD(_name) component_sizes[CMP_##_name] = sizeof(_name)
+#define COMPONENTS \
+    X(Transform)   \
+    X(Camera)      \
+    X(Player)      \
+    X(BoxCollider) \
+    X(RigidBody)
 
-// When adding new components,
-// don't forget to add them in cmp_init function!
 typedef enum ComponentID {
-    CMP_Transform = 0,
-    CMP_Camera,
-    CMP_Player,
-    CMP_BoxCollider,
-    CMP_RigidBody,
-
+#define X(_name) CMP_##_name,
+    COMPONENTS
+#undef X
     CMP_COUNT // Always keep this as the last entry
 } ComponentID;
 
 extern u32 component_sizes[CMP_COUNT];
-
-void cmp_init();
 
 i32 cmp_id_cmp(const void *a, const void *b);
 
