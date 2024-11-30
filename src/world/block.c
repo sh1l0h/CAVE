@@ -3,16 +3,17 @@
 
 Block blocks[BLOCK_COUNT];
 
+// TODO: Load this data from a config file
 void block_init()
 {
-    blocks[BLOCK_AIR].id = BLOCK_AIR;
-    blocks[BLOCK_AIR].is_transparent = true;
-
     GLint grass_top = texture_manager_get_index("grass_block_top.png");
     GLint grass_side = texture_manager_get_index("grass_block_side.png");
     GLint dirt = texture_manager_get_index("dirt.png");
     GLint stone = texture_manager_get_index("stone.png");
     GLint cobblestone = texture_manager_get_index("cobblestone.png");
+
+    blocks[BLOCK_AIR].id = BLOCK_AIR;
+    blocks[BLOCK_AIR].is_transparent = true;
 
     blocks[BLOCK_GRASS].id = BLOCK_GRASS;
     blocks[BLOCK_GRASS].is_transparent = false;

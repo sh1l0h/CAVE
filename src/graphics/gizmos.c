@@ -8,14 +8,14 @@ void gizmos_init()
 {
     f32 cube_verts[] = {
         -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f, 1.0f,
-            -1.0f, 1.0f, -1.0f,
-            -1.0f, 1.0f, 1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, 1.0f,
-            1.0f, 1.0f, -1.0f,
-            1.0f, 1.0f, 1.0f,
-        };
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, 1.0f,
+    };
 
     u8 cube_indices[] = {
         0, 4, 4, 6, 6, 2, 2, 0,
@@ -46,7 +46,7 @@ void gizmos_init()
     gizmos.model_uniform = glGetUniformLocation(gizmos.shader.program, "model");
     gizmos.view_uniform = glGetUniformLocation(gizmos.shader.program, "view");
     gizmos.projection_uniform = glGetUniformLocation(gizmos.shader.program,
-                                "projection");
+                                                     "projection");
     gizmos.color_uniform = glGetUniformLocation(gizmos.shader.program, "color");
 }
 
@@ -56,26 +56,21 @@ void gizmos_begin()
     glBindVertexArray(gizmos.VAO);
 }
 
-void gizmos_set_color(f32 r, f32 g, f32 b, f32 a)
+inline void gizmos_set_color(f32 r, f32 g, f32 b, f32 a)
 {
-    gizmos.color = (Vec4) {
-        {
-            r, g, b, a
-        }
-    };
+    gizmos.color = ZINC_VEC4(r, g, b, a);
 }
 
 void gizmos_draw_cube(Vec3 *position, Vec3 *scale)
 {
     Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
+    Mat4 transform, model;
 
     glUniformMatrix4fv(gizmos.view_uniform, 1, GL_TRUE, (GLfloat *)camera->view);
     glUniformMatrix4fv(gizmos.projection_uniform, 1, GL_TRUE,
                        (GLfloat *)camera->projection);
 
-    Mat4 transform;
     zinc_translate(transform, position);
-    Mat4 model;
     zinc_scale(model, scale);
     zinc_mat4_mul(transform, model, model);
     glUniformMatrix4fv(gizmos.model_uniform, 1, GL_TRUE, (GLfloat *)model);
@@ -90,24 +85,27 @@ void gizmos_draw_cube(Vec3 *position, Vec3 *scale)
 
 void gizmos_draw()
 {
-    gizmos_begin();
-
     HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
     HashMap *colliders = &ecs->archetype_component_table[CMP_BoxCollider];
-
     ArchetypeRecord *collider_record;
+
+    gizmos_begin();
+
     hashmap_foreach_data(colliders, collider_record) {
         Archetype *archetype = collider_record->archetype;
-        ArchetypeRecord *transform_record = hashmap_get(transforms, &archetype->id);
-        if(transform_record == NULL) continue;
+        ArchetypeRecord *transform_record =
+            hashmap_get(transforms, &archetype->id);
 
-        for(u64 i = 0; i < archetype->entities.size; i++) {
-            BoxCollider *collider = array_list_offset(
-                                        &archetype->components[collider_record->index], i);
-            Transform *transform = array_list_offset(
-                                       &archetype->components[transform_record->index], i);
+        if (transform_record == NULL)
+            continue;
 
+        for (u64 i = 0; i < archetype->entities.size; i++) {
+            BoxCollider *collider =
+                array_list_offset(&archetype->components[collider_record->index], i);
+            Transform *transform =
+                array_list_offset(&archetype->components[transform_record->index], i);
             Vec3 collider_center;
+
             zinc_vec3_add(&transform->position, &collider->offset, &collider_center);
             gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
             gizmos_draw_cube(&collider_center, &collider->half_size);

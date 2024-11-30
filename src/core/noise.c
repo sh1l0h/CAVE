@@ -3,6 +3,7 @@
 static void swap(i32 *arr, i32 i, i32 j)
 {
     i32 tmp = arr[i];
+
     arr[i] = arr[j];
     arr[j] = tmp;
 }
@@ -19,7 +20,7 @@ static f32 fade(f32 t)
 
 static f32 grad_2d(i32 hash, f32 x, f32 y)
 {
-    switch(hash & 3) {
+    switch (hash & 3) {
     case 0:
         return x + y;
     case 1:
@@ -36,7 +37,7 @@ static f32 grad_2d(i32 hash, f32 x, f32 y)
 
 static f32 grad_3d(int hash, f32 x, f32 y, f32 z)
 {
-    switch(hash & 0xF) {
+    switch (hash & 0xF) {
     case 0x0:
         return  x + y;
     case 0x1:
@@ -76,27 +77,28 @@ static f32 grad_3d(int hash, f32 x, f32 y, f32 z)
 
 void noise_create(Noise *noise, u32 seed)
 {
-    noise->seed = seed;
-
     i32 per[256];
 
-    for(i32 i = 0; i < 256; i++)
+    noise->seed = seed;
+
+    for (i32 i = 0; i < 256; i++)
         per[i] = i;
 
     srand(seed);
-    for(i32 i = 255; i >= 0; i--) {
+    for (i32 i = 255; i >= 0; i--) {
         i32 j = rand() % (i + 1);
+
         swap(per, i, j);
     }
 
-    for(i32 i = 0; i < 256; i++)
+    for (i32 i = 0; i < 256; i++)
         noise->p[256 + i] = noise->p[i] = per[i];
 }
 
 f32 noise_2d_perlin(Noise *noise, const Vec2 *pos)
 {
-    i32 x = (i32)floorf(pos->x) & 255;
-    i32 y = (i32)floorf(pos->y) & 255;
+    i32 x = (i32) floorf(pos->x) & 255;
+    i32 y = (i32) floorf(pos->y) & 255;
 
     f32 xf = pos->x - floorf(pos->x);
     f32 yf = pos->y - floorf(pos->y);
@@ -149,11 +151,11 @@ f32 noise_2d_octave_perlin(Noise *noise, const Vec2 *pos, u32 octaves,
     f32 sum = 0.0f;
     f32 freq = 1.0f;
     f32 amp = 1.0f;
-
     Vec2 tmp;
+
     zinc_vec2_copy(pos, &tmp);
 
-    for(u32 i = 0; i < octaves; i++) {
+    for (u32 i = 0; i < octaves; i++) {
         sum += noise_2d_perlin(noise, &tmp) * amp;
 
         amp *= persistence;
@@ -161,8 +163,10 @@ f32 noise_2d_octave_perlin(Noise *noise, const Vec2 *pos, u32 octaves,
         zinc_vec2_scale(&tmp, freq, &tmp);
     }
 
-    if (sum > 1.0f) sum = 1.0f;
-    else if (sum < -1.0f) sum = -1.0f;
+    if (sum > 1.0f)
+        sum = 1.0f;
+    else if (sum < -1.0f)
+        sum = -1.0f;
 
     return sum;
 }
@@ -177,7 +181,7 @@ f32 noise_3d_octave_perlin(Noise *noise, const Vec3 *pos, u32 octaves,
     Vec3 tmp;
     zinc_vec3_copy(pos, &tmp);
 
-    for(u32 i = 0; i < octaves; i++) {
+    for (u32 i = 0; i < octaves; i++) {
         sum += noise_3d_perlin(noise, &tmp) * amp;
 
         amp *= persistence;
@@ -185,8 +189,10 @@ f32 noise_3d_octave_perlin(Noise *noise, const Vec3 *pos, u32 octaves,
         zinc_vec3_scale(&tmp, freq, &tmp);
     }
 
-    if (sum > 1.0f) sum = 1.0f;
-    else if (sum < -1.0f) sum = -1.0f;
+    if (sum > 1.0f)
+        sum = 1.0f;
+    else if (sum < -1.0f)
+        sum = -1.0f;
 
     return sum;
 }
@@ -203,7 +209,7 @@ f32 noise_2d_ridged_perlin(Noise *noise, const Vec2 *pos, u32 octaves,
     Vec2 tmp;
     zinc_vec2_copy(pos, &tmp);
 
-    for(u32 i = 0; i < octaves; i++) {
+    for (u32 i = 0; i < octaves; i++) {
         sum += (offset - fabsf(noise_2d_perlin(noise, &tmp))) * amp;
         amp_sum += offset * amp;
 
@@ -227,7 +233,7 @@ f32 noise_3d_ridged_perlin(Noise *noise, const Vec3 *pos, u32 octaves,
     Vec3 tmp;
     zinc_vec3_copy(pos, &tmp);
 
-    for(u32 i = 0; i < octaves; i++) {
+    for (u32 i = 0; i < octaves; i++) {
         sum += (offset - fabsf(noise_3d_perlin(noise, &tmp))) * amp;
         amp_sum += offset * amp;
 
@@ -236,8 +242,10 @@ f32 noise_3d_ridged_perlin(Noise *noise, const Vec3 *pos, u32 octaves,
         zinc_vec3_scale(&tmp, freq, &tmp);
     }
 
-    if (sum > 1.0f) sum = 1.0f;
-    else if (sum < -1.0f) sum = -1.0f;
+    if (sum > 1.0f)
+        sum = 1.0f;
+    else if (sum < -1.0f)
+        sum = -1.0f;
 
     return sum / amp_sum;
 }

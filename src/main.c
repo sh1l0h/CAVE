@@ -20,6 +20,15 @@
 
 int main()
 {
+    SDL_Window *window;
+    SDL_GLContext context = NULL;
+    GLenum err;
+    bool show_gizmos = false, quit = false;
+    u32 last_time, time_to_process = 0,
+        ms_per_update = 1000 / FIXED_UPDATES_PER_SECOND,
+        second_count = 0,
+        frame_count = 0;
+
     log_create();
 
     // Initializing SDL window and opengl
@@ -37,16 +46,14 @@ int main()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    SDL_Window *window = SDL_CreateWindow("CAVE",
-                                          SDL_WINDOWPOS_CENTERED,
-                                          SDL_WINDOWPOS_CENTERED,
-                                          1280,
-                                          720,
-                                          SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("CAVE",
+                              SDL_WINDOWPOS_CENTERED,
+                              SDL_WINDOWPOS_CENTERED,
+                              1280,
+                              720,
+                              SDL_WINDOW_OPENGL);
 
-    SDL_GLContext context = NULL;
-
-    if(window == NULL) {
+    if (window == NULL) {
         log_fatal("Failed to create window: %s", SDL_GetError());
         goto End;
     }
@@ -59,7 +66,7 @@ int main()
     }
     log_debug("OpenGL context created");
 
-    GLenum err = glewInit();
+    err = glewInit();
     if(err != GLEW_OK) {
         log_fatal("Failed to initialize GLEW: %s", glewGetErrorString(err));
         goto End;
@@ -82,14 +89,12 @@ int main()
 
     // Initializing the game
     ecs_init();
-    cmp_init();
 
-    Vec3 player_initial_pos = {{0.0f, 300.0f, 0.0f}};
-    player_create(&player_initial_pos);
+    player_create(&ZINC_VEC3(0.0f, 300.0f, 0.0f));
 
     chunk_manager_init();
 
-    if(keyboard_init())
+    if (keyboard_init())
         goto End;
 
     chunk_thread_pool_init();
@@ -105,19 +110,15 @@ int main()
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
-    bool show_gizmos = false;
-
     // Main loop
-    u32 last_time = SDL_GetTicks();
-    u32 time_to_process = 0;
-    const u32 ms_per_update = 1000 / FIXED_UPDATES_PER_SECOND;
-    u32 second_count = 0;
-    u32 frame_count = 0;
+    last_time = SDL_GetTicks();
 
-    bool quit = false;
+    quit = false;
     while(!quit) {
+        SDL_Event event;
         u32 curr_time = SDL_GetTicks();
         u32 delta_time = curr_time - last_time;
+
         last_time = curr_time;
         time_to_process += delta_time;
         second_count += delta_time;
@@ -125,10 +126,8 @@ int main()
         // Reading inputs
         keyboard_update_previous();
 
-        SDL_Event event;
-        while(SDL_PollEvent(&event)) {
-            switch(event.type) {
-
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
                 case SDL_WINDOWEVENT_RESIZED:
@@ -157,12 +156,12 @@ int main()
             }
         }
 
-        if(keyboard_did_key_go_down(KEY_SHOW_GIZMOS))
+        if (keyboard_did_key_go_down(KEY_SHOW_GIZMOS))
             show_gizmos = !show_gizmos;
         mouse_update();
 
         // Fixed time update
-        while(time_to_process >= ms_per_update) {
+        while (time_to_process >= ms_per_update) {
             player_update_movement(FIXED_DELTA_TIME);
             rigidbody_update(FIXED_DELTA_TIME);
             time_to_process -= ms_per_update;
@@ -182,13 +181,14 @@ int main()
 
         frame_count++;
 
-        if(second_count >= 1000) {
+        if (second_count >= 1000) {
             log_info("FPS: %f", frame_count * 1000.0f / second_count);
             second_count = 0;
             frame_count = 0;
         }
 
-        if(show_gizmos) gizmos_draw();
+        if (show_gizmos)
+            gizmos_draw();
 
         SDL_GL_SwapWindow(window);
 
@@ -201,7 +201,7 @@ End:
 
     world_destroy();
 
-    if(chunk_thread_pool != NULL) {
+    if (chunk_thread_pool != NULL) {
         chunk_thread_pool_wait();
         chunk_thread_pool_stop();
         chunk_thread_pool_deinit();
@@ -211,10 +211,10 @@ End:
 
     chunk_manager_deinit();
 
-    if(context != NULL)
+    if (context != NULL)
         SDL_GL_DeleteContext(context);
 
-    if(window != NULL)
+    if (window != NULL)
         SDL_DestroyWindow(window);
 
     SDL_Quit();

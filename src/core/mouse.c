@@ -1,6 +1,6 @@
 #include "../../include/core/mouse.h"
 
-Mouse mouse = {0};
+Mouse mouse;
 
 void mouse_update()
 {

@@ -10,9 +10,11 @@ void linked_list_destroy(LinkedList *list, void (*free_element)(const void *))
 {
     struct LinkedListNode *curr = list->head;
 
-    while(curr != NULL) {
+    while (curr != NULL) {
         struct LinkedListNode *next = curr->next;
-        if(free_element != NULL) free_element(curr->data);
+
+        if (free_element != NULL)
+            free_element(curr->data);
         free(curr);
         curr = next;
     }
@@ -20,11 +22,12 @@ void linked_list_destroy(LinkedList *list, void (*free_element)(const void *))
 
 void linked_list_add(LinkedList *list, void *el)
 {
-    struct LinkedListNode *new_node = malloc(sizeof(struct LinkedListNode));
+    struct LinkedListNode *new_node = malloc(sizeof(*new_node));
+
     new_node->data = el;
     new_node->next = NULL;
 
-    if(list->head == NULL) {
+    if (list->head == NULL) {
         list->head = list->tail = new_node;
         list->size++;
         return;
@@ -33,16 +36,15 @@ void linked_list_add(LinkedList *list, void *el)
     list->tail->next = new_node;
     list->tail = new_node;
     list->size++;
-    return;
 }
 
 void linked_list_push(LinkedList *list, void *el)
 {
-    struct LinkedListNode *new_node = malloc(sizeof(struct LinkedListNode));
+    struct LinkedListNode *new_node = malloc(sizeof(*new_node));
+
     new_node->data = el;
     list->size++;
-
-    if(list->size == 0) {
+    if (list->size == 0) {
         new_node->next = NULL;
         list->head = list->tail = new_node;
         return;
@@ -50,24 +52,29 @@ void linked_list_push(LinkedList *list, void *el)
 
     new_node->next = list->head;
     list->head = new_node;
-    return;
 }
 
 void *linked_list_pop(LinkedList *list)
 {
-    if(list->size == 0) return NULL;
+    struct LinkedListNode *head;
+    void *data;
+
+    if (list->size == 0)
+        return NULL;
     list->size--;
 
-    if(list->head == list->tail) {
-        void *data = list->head->data;
+    if (list->head == list->tail) {
+        data = list->head->data;
+
         free(list->head);
         list->head = list->tail = NULL;
         return data;
     }
 
-    struct LinkedListNode *head = list->head;
+    head = list->head;
     list->head = head->next;
-    void *data = head->data;
+    data = head->data;
     free(head);
+
     return data;
 }

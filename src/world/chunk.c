@@ -165,11 +165,11 @@ struct ChunkManager *chunk_manager;
 i32 chunk_manager_init()
 {
     chunk_manager = malloc(sizeof(struct ChunkManager));
-
     i32 shader_fail = shader_create(&chunk_manager->shader,
                                     "./res/shaders/chunk.vert",
                                     "./res/shaders/chunk.frag");
-    if(shader_fail)
+    f32 half_fov;
+    if (shader_fail)
         return 1;
 
     chunk_manager->model_uniform =
@@ -188,7 +188,7 @@ i32 chunk_manager_init()
 
     Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
 
-    f32 half_fov = camera->fov / 2.0f;
+    half_fov = camera->fov / 2.0f;
     chunk_manager->tan_half_fov = tanf(half_fov);
     chunk_manager->radius_over_cos_half_fov =
         chunk_manager->bounding_radius / cosf(half_fov);
@@ -201,7 +201,7 @@ i32 chunk_manager_init()
 
 void chunk_manager_deinit()
 {
-    if(chunk_manager == NULL)
+    if (chunk_manager == NULL)
         return;
 
     shader_destroy(&chunk_manager->shader);
@@ -210,8 +210,9 @@ void chunk_manager_deinit()
 
 inline struct ChunkBlockData *chunk_block_data_allocate()
 {
-    struct ChunkBlockData *result = calloc(1,
-                                           sizeof(*result) + CHUNK_VOLUME * sizeof(u16));
+    struct ChunkBlockData *result =
+        calloc(1, sizeof(*result) + CHUNK_VOLUME * sizeof(u16));
+
     result->owner_count = 1;
     return result;
 }
@@ -222,13 +223,9 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
 
     zinc_vec3i_copy(pos, &chunk->position);
 
-    chunk->center = (Vec3) {
-        {
-            CHUNK_SIZE * (chunk->position.x + 0.5f),
-                       CHUNK_SIZE * (chunk->position.y + 0.5f),
-                       CHUNK_SIZE * (chunk->position.z + 0.5f)
-        }
-    };
+    chunk->center = ZINC_VEC3(CHUNK_SIZE * (chunk->position.x + 0.5f),
+                              CHUNK_SIZE * (chunk->position.y + 0.5f),
+                              CHUNK_SIZE * (chunk->position.z + 0.5f));
 
     chunk->block_data = chunk_block_data_allocate();
 
@@ -260,11 +257,12 @@ void chunk_init_buffers(Chunk *chunk)
 
 void chunk_destroy(Chunk *chunk)
 {
-    if(chunk == NULL) return;
-    if(chunk->block_data != NULL && chunk->block_data->owner_count == 1)
+    if (chunk == NULL)
+        return;
+    if (chunk->block_data != NULL && chunk->block_data->owner_count == 1)
         free(chunk->block_data);
 
-    if(chunk->has_buffers) {
+    if (chunk->has_buffers) {
         glDeleteBuffers(1, &chunk->VBO);
         glDeleteBuffers(1, &chunk->IBO);
         glDeleteVertexArrays(1, &chunk->VAO);
@@ -279,17 +277,18 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
     u32 origin_y = pos->y + direction_offset[direction * 3 + 1];
     u32 origin_z = pos->z + direction_offset[direction * 3 + 2];
 
-    for(u32 i = 0; i < 4; i++) {
+    for (u32 i = 0; i < 4; i++) {
         Vec3i *offset = (Vec3i *)(vertex_offsets + direction * 12 + 3 * i);
+        u32 x = (origin_x + offset->x) * 16,
+            y = (origin_y + offset->y) * 16,
+            z = (origin_z + offset->z) * 16,
+            u = uv_offset[i * 2],
+            v = uv_offset[i * 2 + 1],
+            brightness = 0,
+            ao = 3,
+            data1, data2;
 
-        u32 x = (origin_x + offset->x) * 16;
-        u32 y = (origin_y + offset->y) * 16;
-        u32 z = (origin_z + offset->z) * 16;
-        u32 u = uv_offset[i * 2];
-        u32 v = uv_offset[i * 2 + 1];
-
-        u32 brightness = 0;
-        switch(direction) {
+        switch (direction) {
         case DIR_TOP:
             brightness = 15;
             break;
@@ -299,25 +298,22 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
         case DIR_NORTH:
             brightness = 12;
             break;
-
         default:
             brightness = 11;
             break;
         }
 
-        u32 ao = 3;
-
-        if(!neighboring_blocks[i * 2] || !neighboring_blocks[i * 2 + 2])
+        if (!neighboring_blocks[i * 2] || !neighboring_blocks[i * 2 + 2])
             ao = 7 - neighboring_blocks[i * 2] - neighboring_blocks[i * 2 + 1] -
                  neighboring_blocks[i * 2 + 2];
 
-        u32 data1 =
+        data1 =
             ((u & DATA_UV_MASK) << DATA_U_OFFSET) |
             ((z & DATA_XYZ_MASK) << DATA_Z_OFFSET) |
             ((y & DATA_XYZ_MASK) << DATA_Y_OFFSET) |
             ((x & DATA_XYZ_MASK) << DATA_X_OFFSET);
 
-        u32 data2 =
+        data2 =
             ((ao & DATA_AMBIENT_OCCLUSION_MASK) << DATA_AMBIENT_OCCLUSION_OFFSET) |
             ((brightness & DATA_RGB_MASK) << DATA_B_OFFSET) |
             ((brightness & DATA_RGB_MASK) << DATA_G_OFFSET) |
@@ -329,8 +325,9 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
         mesh_buffer_append(&mesh->vert_buffer, &data2, sizeof(u32));
     }
 
-    for(u32 i = 0; i < 6; i++) {
+    for (u32 i = 0; i < 6; i++) {
         u16 index = mesh->vert_count + index_offset[i];
+
         mesh_buffer_append(&mesh->index_buffer, (void *) &index, sizeof(u16));
     }
 
@@ -342,18 +339,16 @@ static u16 chunk_mesh_arg_get_block(struct ChunkMeshArg *arg,
                                     const Vec3i *offset)
 {
 
-    Vec3i chunk_position = BLOCK_2_CHUNK(*offset);
-    Vec3i block_offset = {{
-            (offset->x + CHUNK_SIZE) % CHUNK_SIZE,
-            (offset->y + CHUNK_SIZE) % CHUNK_SIZE,
-            (offset->z + CHUNK_SIZE) % CHUNK_SIZE,
-        }
-    };
-
+    Vec3i chunk_position = BLOCK_2_CHUNK(offset),
+          block_offset = ZINC_VEC3_INIT((offset->x + CHUNK_SIZE) % CHUNK_SIZE,
+                                        (offset->y + CHUNK_SIZE) % CHUNK_SIZE,
+                                        (offset->z + CHUNK_SIZE) % CHUNK_SIZE);
     u8 index = (chunk_position.y + 1) + (chunk_position.x + 1) * 3 +
                (chunk_position.z + 1) * 9;
     struct ChunkBlockData *block_data = arg->block_data[index];
-    if(block_data == NULL) return BLOCK_STONE;
+
+    if (block_data == NULL)
+        return BLOCK_STONE;
 
     return block_data->data[CHUNK_OFFSET_2_INDEX(block_offset)];
 }
@@ -364,32 +359,37 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 
     mesh_create(result);
 
-    for(i32 z = 0; z < CHUNK_SIZE; z++) {
-        for(i32 y = 0; y < CHUNK_SIZE; y++) {
-            for(i32 x = 0; x < CHUNK_SIZE; x++) {
-
+    for (i32 z = 0; z < CHUNK_SIZE; z++) {
+        for (i32 y = 0; y < CHUNK_SIZE; y++) {
+            for (i32 x = 0; x < CHUNK_SIZE; x++) {
                 Vec3i offset = {{x, y, z}};
                 u32 data = chunk_mesh_arg_get_block(arg, &offset);
                 u16 id = data & BLOCK_ID_MASK;
 
-                if(id == BLOCK_AIR) continue;
+                if (id == BLOCK_AIR)
+                    continue;
 
-                for(i32 dir = 0; dir < 6; dir++) {
+                for (i32 dir = 0; dir < 6; dir++) {
                     Vec3i facing_block_pos;
+                    u16 block_id;
+                    u8 neighboring_blocks[9];
+
                     direction_get_norm(dir, &facing_block_pos);
                     zinc_vec3i_add(&facing_block_pos, &offset, &facing_block_pos);
 
-                    u16 block_id = chunk_mesh_arg_get_block(arg, &facing_block_pos);
-                    if(!blocks[block_id].is_transparent) continue;
+                    block_id = chunk_mesh_arg_get_block(arg, &facing_block_pos);
+                    if (!blocks[block_id].is_transparent)
+                        continue;
 
-                    u8 neighboring_blocks[9];
 
-                    for(i32 i = 0; i < 8; i++) {
+                    for (i32 i = 0; i < 8; i++) {
                         Vec3i *block_offset = (Vec3i *)(neighbor_offset + 8 * 3 * dir + 3 * i);
                         Vec3i block_pos;
+                        u16 block_id;
+
                         zinc_vec3i_add(block_offset, &offset, &block_pos);
 
-                        u16 block_id = chunk_mesh_arg_get_block(arg, &block_pos);
+                        block_id = chunk_mesh_arg_get_block(arg, &block_pos);
                         neighboring_blocks[i] = !blocks[block_id].is_transparent;
                     }
 
@@ -408,29 +408,25 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
 {
     struct ChunkMeshArg *arg = calloc(1, sizeof(struct ChunkMeshArg));
-    arg->mesh_time = SDL_GetTicks();
 
+    arg->mesh_time = SDL_GetTicks();
     zinc_vec3i_copy(&chunk->position, &arg->chunk_pos);
 
-    for(i32 z = -1; z <= 1; z++) {
-        for(i32 x = -1; x <= 1; x++) {
-            for(i32 y = -1; y <= 1; y++) {
+    for (i32 z = -1; z <= 1; z++) {
+        for (i32 x = -1; x <= 1; x++) {
+            for (i32 y = -1; y <= 1; y++) {
 
-                Vec3i pos = {{
-                        x + chunk->position.x,
-                        y + chunk->position.y,
-                        z + chunk->position.z
-                    }
-                };
-
+                Vec3i pos = ZINC_VEC3I_INIT(x + chunk->position.x,
+                                            y + chunk->position.y,
+                                            z + chunk->position.z);
                 Chunk *chunk = world_get_chunk(&pos);
 
-                if(chunk == NULL)
+                if (chunk == NULL)
                     continue;
+
                 chunk->block_data->owner_count++;
 
-                u8 index = (y + 1) + (x + 1) * 3 + (z + 1) * 9;
-                arg->block_data[index] = chunk->block_data;
+                arg->block_data[(y + 1) + (x + 1) * 3 + (z + 1) * 9] = chunk->block_data;
             }
         }
     }
@@ -441,16 +437,22 @@ static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
 
 void chunk_render(Chunk *chunk)
 {
-    if(!chunk)
+    Transform *player_transform;
+    Camera *camera;
+    Vec3 chunk_center, pos;
+    f32 projection_on_x, projection_on_y, projection_on_z, h;
+    Mat4 model;
+
+    if (!chunk)
         return;
 
-    if(chunk->block_count == 0)
+    if (chunk->block_count == 0)
         return;
 
-    if(chunk->is_dirty) {
+    if (chunk->is_dirty) {
         struct ChunkMeshArg *arg = chunk_mesh_arg_create(chunk);
-
         ChunkThreadTask *task = malloc(sizeof(ChunkThreadTask));
+
         task->type = TASK_MESH_CHUNK;
         task->arg = arg;
 
@@ -459,51 +461,45 @@ void chunk_render(Chunk *chunk)
         chunk->is_dirty = false;
     }
 
-    if(chunk->index_count == 0) return;
-
-    Transform *player_transform =
-        ecs_get_component(ecs->player_id, CMP_Transform);
-
-    Camera *camera = ecs_get_component(ecs->player_id, CMP_Camera);
-
-    Vec3 chunk_center;
-    zinc_vec3_sub(&chunk->center, &player_transform->position, &chunk_center);
-
-    f32 projection_on_z =
-        zinc_vec3_dot(&player_transform->forward, &chunk_center);
-
-    if(projection_on_z + chunk_manager->bounding_radius < camera->near ||
-            projection_on_z - chunk_manager->bounding_radius > camera->far)
+    if (chunk->index_count == 0)
         return;
 
-    f32 h = chunk_manager->tan_half_fov * projection_on_z;
+    player_transform = ecs_get_component(ecs->player_id, CMP_Transform);
 
-    f32 projection_on_y = zinc_vec3_dot(&player_transform->up, &chunk_center);
+    camera = ecs_get_component(ecs->player_id, CMP_Camera);
 
-    if(projection_on_y < 0.0f)
+    zinc_vec3_sub(&chunk->center, &player_transform->position, &chunk_center);
+
+    projection_on_z = zinc_vec3_dot(&player_transform->forward, &chunk_center);
+
+    if ((projection_on_z + chunk_manager->bounding_radius < camera->near ||
+         projection_on_z - chunk_manager->bounding_radius > camera->far))
+        return;
+
+    h = chunk_manager->tan_half_fov * projection_on_z;
+
+    projection_on_y = zinc_vec3_dot(&player_transform->up, &chunk_center);
+
+    if (projection_on_y < 0.0f)
         projection_on_y *= -1;
 
-    if(projection_on_y > chunk_manager->radius_over_cos_half_fov + h)
+    if (projection_on_y > chunk_manager->radius_over_cos_half_fov + h)
         return;
 
     h *= camera->aspect_ratio;
-    f32 projection_on_x = zinc_vec3_dot(&player_transform->right, &chunk_center);
-    if(projection_on_x < 0)
+    projection_on_x = zinc_vec3_dot(&player_transform->right, &chunk_center);
+    if (projection_on_x < 0)
         projection_on_x *= -1;
 
-    if(projection_on_x > chunk_manager->radius_over_cos_atan + h)
+    if (projection_on_x > chunk_manager->radius_over_cos_atan + h)
         return;
 
     glBindVertexArray(chunk->VAO);
 
-    Vec3 pos = {{
-            chunk->position.x * CHUNK_SIZE,
-            chunk->position.y * CHUNK_SIZE,
-            chunk->position.z *CHUNK_SIZE
-        }
-    };
+    pos = ZINC_VEC3(chunk->position.x * CHUNK_SIZE,
+                    chunk->position.y * CHUNK_SIZE,
+                    chunk->position.z *CHUNK_SIZE);
 
-    Mat4 model;
     zinc_translate(model, &pos);
 
     glUniformMatrix4fv(chunk_manager->model_uniform,
@@ -516,8 +512,9 @@ void chunk_render(Chunk *chunk)
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 {
-    if(chunk->block_data->owner_count > 1) {
+    if (chunk->block_data->owner_count > 1) {
         struct ChunkBlockData *new_block_data = chunk_block_data_allocate();
+
         memcpy(new_block_data->data,
                chunk->block_data->data,
                CHUNK_VOLUME * sizeof(u16));
@@ -526,70 +523,53 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
         chunk->block_data = new_block_data;
     }
 
-    if(block == BLOCK_AIR) chunk->block_count--;
-    else if(chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR)
+    if (block == BLOCK_AIR)
+        chunk->block_count--;
+    else if (chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR)
         chunk->block_count++;
 
     chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
     chunk->is_dirty = true;
 
-    if(CHUNK_ON_BOUNDS(*pos)) {
+    if (CHUNK_ON_BOUNDS(*pos)) {
         Chunk *neighbors[3] = {NULL, NULL, NULL};
-
         Vec3i tmp;
         u32 index = 0;
-        if(pos->x == 0) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    -1, 0, 0
-                    }
-            }, &chunk->position, &tmp);
+
+        if (pos->x == 0) {
+            zinc_vec3i_add(&ZINC_VEC3I(-1, 0, 0),
+                           &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        else if(pos->x == CHUNK_SIZE - 1) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    1, 0, 0
-                }
-            }, &chunk->position, &tmp);
+        else if (pos->x == CHUNK_SIZE - 1) {
+            zinc_vec3i_add(&ZINC_VEC3I(1, 0, 0),
+                           &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        if(pos->y == 0) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, -1, 0
-                }
-            }, &chunk->position, &tmp);
+        if (pos->y == 0) {
+            zinc_vec3i_add(&ZINC_VEC3I(0, -1, 0),
+                           &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        else if(pos->y == CHUNK_SIZE - 1) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, 1, 0
-                }
-            }, &chunk->position, &tmp);
+        else if (pos->y == CHUNK_SIZE - 1) {
+            zinc_vec3i_add(&ZINC_VEC3I(0, 1, 0),
+                           &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
-        if(pos->z == 0) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, 0, -1
-                }
-            }, &chunk->position, &tmp);
+        if (pos->z == 0) {
+            zinc_vec3i_add(&ZINC_VEC3I(0, 0, -1),
+                           &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
         else if(pos->z == CHUNK_SIZE - 1) {
-            zinc_vec3i_add(&(Vec3i) {
-                {
-                    0, 0, 1
-                }
-            }, &chunk->position, &tmp);
+            zinc_vec3i_add(&ZINC_VEC3I(0, 0, 1),
+                           &chunk->position, &tmp);
             neighbors[index++] = world_get_chunk(&tmp);
         }
 
-        for(i32 i = 0; i < 3; i++) {
-            if(neighbors[i]) neighbors[i]->is_dirty = true;
-        }
+        for (i32 i = 0; i < 3; i++)
+            if (neighbors[i])
+                neighbors[i]->is_dirty = true;
     }
 }
 
