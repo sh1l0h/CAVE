@@ -8,6 +8,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release)" FORCE)
 endif()
 
+include_directories(include lib)
 add_subdirectory(lib/ZINC)
 
 find_package(SDL2 REQUIRED)
