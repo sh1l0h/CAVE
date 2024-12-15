@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
 project(CAVE LANGUAGES C)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE) 
 
@@ -41,7 +43,7 @@ add_executable(${PROJECT_NAME}
     src/ecs/ecs.c
     src/ecs/components.c
     src/data_structures/hash_map.c
-    src/data_structures/linked_list.c
+    src/data_structures/list.c
     src/data_structures/array_list.c
     src/data_structures/cyclic_queue.c)
 
