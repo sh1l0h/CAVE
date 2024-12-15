@@ -5,7 +5,7 @@
 #include "../data_structures/array_list.h"
 #include <SDL2/SDL_thread.h>
 
-#define CHUNK_THREAD_COUNT 4
+#define CHUNK_THREAD_COUNT 11
 
 typedef enum ChunkThreadTaskType {
     TASK_GEN_COLUMN,

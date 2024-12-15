@@ -232,6 +232,8 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
     chunk->block_count = 0;
     chunk->is_dirty = true;
 
+    hashmap_node_create(&chunk->inactive_chunks_hashmap);
+
     chunk->index_count = 0;
 }
 

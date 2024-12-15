@@ -1,88 +1,84 @@
 #include "../../include/data_structures/hash_map.h"
 
-void hashmap_create(HashMap *hm, u64 initial_size,
-                    u64 (*hash)(const void *element), i32 (*cmp)(const void *key, const void *arg),
+void hashmap_node_create(HashMapNode *node)
+{
+    list_create(&node->list_node);
+    node->next = NULL;
+}
+
+void hashmap_create(HashMap *hm, u8 initial_size,
+                    size_t node_offset, size_t key_offset,
+                    u64 (*hash)(const void *element),
+                    i32 (*cmp)(const void *key, const void *arg),
                     f32 load_factor)
 {
-    hm->buckets = calloc(initial_size, sizeof(struct HashMapNode *));
-    hm->allocated_buckets = initial_size;
+    hm->buckets = calloc(1 << initial_size, sizeof(struct HashMapNode *));
+    hm->allocated_buckets_log2 = initial_size;
     hm->size = 0;
+    list_create(&hm->list_head);
 
     hm->load_factor = load_factor;
     hm->hash = hash;
     hm->cmp = cmp;
+    hm->node_offset = node_offset;
+    hm->key_offset = key_offset;
 }
 
-void hashmap_destroy(HashMap *hm, void (*free_key)(void *), void (*free_data)(void *))
+void hashmap_destroy(HashMap *hm, void (*free_element)(void *element))
 {
-    for (u64 i = 0; i < hm->allocated_buckets; i++) {
-        struct HashMapNode *curr = hm->buckets[i];
+    ListNode *curr, *next;
 
-        while (curr != NULL) {
-            struct HashMapNode *temp = curr;
+    if (!free_element)
+        free(hm->buckets);
 
-            curr = curr->next;
-            if (free_key != NULL)
-                free_key(temp->key);
-
-            if (free_data != NULL)
-                free_data(temp->data);
-
-            free(temp);
-        }
-    }
-
-    free(hm->buckets);
+    list_for_each_safe(&hm->list_head, curr, next)
+        free_element(hashmap_element_by_list(hm, curr));
 }
 
-static void hashmap_resize(HashMap *hm, u32 new_buckets_size)
+static void hashmap_resize(HashMap *hm)
 {
-    struct HashMapNode **new_buckets = calloc(new_buckets_size,
-                                              sizeof(struct HashMapNode *));
+    u64 new_buckets_size = 1 << ++hm->allocated_buckets_log2;
+    struct HashMapNode *pos, **new_buckets = calloc(new_buckets_size,
+                                                    sizeof(*new_buckets));
 
-    for (u64 i = 0; i < hm->allocated_buckets; i++) {
-        struct HashMapNode *curr = hm->buckets[i];
+    hashmap_for_each_node(hm, pos) {
+        u64 new_index = hm->hash(hashmap_key_by_node(hm, pos)) &
+            (new_buckets_size - 1);
 
-        while (curr != NULL) {
-            struct HashMapNode *next = curr->next;
-
-            u64 index = hm->hash(curr->key) % new_buckets_size;
-            curr->next = new_buckets[index];
-            new_buckets[index] = curr;
-
-            curr = next;
-        }
+        pos->next = new_buckets[new_index];
+        new_buckets[new_index] = pos;
     }
 
     free(hm->buckets);
     hm->buckets = new_buckets;
-    hm->allocated_buckets = new_buckets_size;
 }
 
-void hashmap_add(HashMap *hm, void *key, void *element)
+void hashmap_add(HashMap *hm, void *element)
 {
-    u64 index = hm->hash(key) % hm->allocated_buckets;
-    struct HashMapNode *new_node = malloc(sizeof(struct HashMapNode));
-
-    new_node->key = key;
-    new_node->data = element;
+    HashMapNode *new_node = hashmap_node(hm, element);
+    u64 buckets_size = (1 << hm->allocated_buckets_log2),
+        index = hm->hash(hashmap_key(hm, element)) &
+            (buckets_size - 1);
 
     new_node->next = hm->buckets[index];
     hm->buckets[index] = new_node;
     hm->size++;
 
-    if ((f32)hm->size / (f32)hm->allocated_buckets > hm->load_factor)
-        hashmap_resize(hm, hm->allocated_buckets * 2);
+    list_add(&hm->list_head, &new_node->list_node);
+
+    if ((f32) hm->size / buckets_size > hm->load_factor)
+        hashmap_resize(hm);
 }
 
 void *hashmap_get(HashMap *hm, const void *key)
 {
-    u64 index = hm->hash(key) % hm->allocated_buckets;
+    u64 index = hm->hash(key) &
+        ((1 << hm->allocated_buckets_log2) - 1);
     struct HashMapNode *curr = hm->buckets[index];
 
     while (curr != NULL) {
-        if (!hm->cmp(curr->key, key))
-            return curr->data;
+        if (!hm->cmp(hashmap_key_by_node(hm, curr), key))
+            return hashmap_element_by_node(hm, curr);
 
         curr = curr->next;
     }
@@ -92,25 +88,24 @@ void *hashmap_get(HashMap *hm, const void *key)
 
 void *hashmap_remove(HashMap *hm, const void *key)
 {
-    u64 index = hm->hash(key) % hm->allocated_buckets;
-    struct HashMapNode *curr = hm->buckets[index];
-    struct HashMapNode *prev = NULL;
+    u64 index = hm->hash(key) &
+        ((1 << hm->allocated_buckets_log2) - 1);
+    struct HashMapNode *prev = NULL,
+                       *curr = hm->buckets[index];
 
     while (curr != NULL) {
-        if (!hm->cmp(curr->key, key)) {
-            struct HashMapNode *next = curr->next;
-            void *tmp;
-
+        if (!hm->cmp(hashmap_key_by_node(hm, curr), key)) {
             hm->size--;
 
             if (prev == NULL)
-                hm->buckets[index] = next;
+                hm->buckets[index] = curr->next;
             else
-                prev->next = next;
+                prev->next = curr->next;
 
-            tmp = curr->data;
-            free(curr);
-            return tmp;
+            list_del(&curr->list_node);
+            curr->next = NULL;
+
+            return hashmap_element_by_node(hm, curr);
         }
 
         prev = curr;

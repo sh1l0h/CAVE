@@ -52,7 +52,7 @@ static void world_center_around_position(World *world, Vec3 *pos)
             continue;
 
         if (!world_set_chunk(curr))
-            hashmap_add(&world->inactive_chunks, &curr->position, curr);
+            hashmap_add(&world->inactive_chunks, curr);
     }
 
     free(old_chunks);
@@ -64,8 +64,8 @@ static void world_center_around_position(World *world, Vec3 *pos)
                       chunk_pos;
                 Chunk **curr = world->chunks + world_offset_to_index(&offset),
                       *chunk;
-                Vec2i *column_pos;
                 ChunkThreadTask *task;
+                struct ColInGenWrapper *wrapper;
 
                 if (*curr != NULL)
                     continue;
@@ -101,17 +101,17 @@ static void world_center_around_position(World *world, Vec3 *pos)
                 if (chunk_pos.y < 0)
                     continue;
 
-                column_pos = malloc(sizeof(Vec2i));
-                column_pos->x = chunk_pos.x;
-                column_pos->y = chunk_pos.z;
+                wrapper = malloc(sizeof(*wrapper));
+                wrapper->vec.x = chunk_pos.x;
+                wrapper->vec.y = chunk_pos.z;
 
-                task = malloc(sizeof(ChunkThreadTask));
+                task = malloc(sizeof(*task));
                 task->type = TASK_GEN_COLUMN;
-                task->arg = column_pos;
+                task->arg = wrapper;
 
                 chunk_thread_pool_add_task(task);
 
-                hashmap_add(&world->columns_in_generation, column_pos, column_pos);
+                hashmap_add(&world->columns_in_generation, wrapper);
             }
         }
     }
@@ -131,9 +131,15 @@ void world_create(i32 size_x, i32 size_y, i32 size_z)
     log_debug("World seed: %d", seed);
     noise_create(&world->noise, seed);
 
-    hashmap_create(&world->inactive_chunks, 1024, vec3i_hash, vec3i_cmp, 0.8f);
-    hashmap_create(&world->columns_in_generation, 1024, vec2i_hash, vec2i_cmp,
-                   0.8f);
+    hashmap_create(&world->inactive_chunks, 12,
+                   offsetof(Chunk, inactive_chunks_hashmap),
+                   offsetof(Chunk, position),
+                   vec3i_hash, vec3i_cmp, 0.8f);
+
+    hashmap_create(&world->columns_in_generation, 10,
+                   offsetof(struct ColInGenWrapper, columns_in_generation_hashmap),
+                   offsetof(struct ColInGenWrapper, vec),
+                   vec2i_hash, vec2i_cmp, 0.8f);
 
     world->chunks_size = ZINC_VEC3I(size_x, size_y, size_z);
     world->chunks = calloc(WORLD_VOLUME, sizeof(Chunk *));
@@ -157,8 +163,8 @@ void world_destroy()
 
     free(world->chunks);
 
-    hashmap_destroy(&world->inactive_chunks, NULL, chunk_destroy_wrapper);
-    hashmap_destroy(&world->columns_in_generation, NULL, NULL);
+    hashmap_destroy(&world->inactive_chunks, chunk_destroy_wrapper);
+    hashmap_destroy(&world->columns_in_generation, NULL);
 
     free(world);
 }

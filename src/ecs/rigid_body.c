@@ -72,13 +72,13 @@ break_loop:
 
 void rigidbody_update(f32 dt)
 {
-    HashMap *rbs = &ecs->archetype_component_table[CMP_RigidBody];
-    HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
-    HashMap *colliders = &ecs->archetype_component_table[CMP_BoxCollider];
-    ArchetypeRecord *rb_record;
+    HashMap *rbs = &ecs->all_component_archetypes[CMP_RigidBody];
+    HashMap *transforms = &ecs->all_component_archetypes[CMP_Transform];
+    HashMap *colliders = &ecs->all_component_archetypes[CMP_BoxCollider];
+    struct ArchetypeRecord *rb_record;
 
-    hashmap_foreach_data(rbs, rb_record) {
-        ArchetypeRecord *transform_record, *collider_record;
+    hashmap_for_each(rbs, rb_record) {
+        struct ArchetypeRecord *transform_record, *collider_record;
         Archetype *archetype;
 
         transform_record = hashmap_get(transforms, &rb_record->archetype->id);

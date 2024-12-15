@@ -13,6 +13,7 @@ typedef enum TextureType {
 
 struct TextureRecord {
     GLint index;
+    HashMap texture_records_hashmap;
     char texture_name[];
 };
 

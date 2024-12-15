@@ -1,7 +1,7 @@
 #ifndef CAVE_BLOCK_H
 #define CAVE_BLOCK_H
 
-#include "../util.h"
+#include "util.h"
 #include <GL/glew.h>
 
 enum BlockID {

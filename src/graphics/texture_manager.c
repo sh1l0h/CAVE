@@ -95,7 +95,7 @@ static i32 texture_manager_load_textures_from_dir(const char *texture_dir_path,
         memcpy(record->texture_name, curr->d_name, sizeof(char) * (file_name_len + 1));
         record->index = index++;
 
-        hashmap_add(&texture_manager->texture_records, record->texture_name, record);
+        hashmap_add(&texture_manager->texture_records, record);
     }
     closedir(texture_dir);
 
@@ -109,7 +109,10 @@ void texture_manager_init()
 {
     texture_manager = malloc(sizeof(TextureManager));
 
-    hashmap_create(&texture_manager->texture_records, 32, string_hash, string_cmp,
+    hashmap_create(&texture_manager->texture_records, 5,
+                   offsetof(struct TextureRecord, texture_records_hashmap),
+                   offsetof(struct TextureRecord, texture_name),
+                   string_hash, string_cmp,
                    0.8f);
 
     texture_manager_load_textures_from_dir(BLOCK_TEXTURE_DIR,
@@ -124,7 +127,7 @@ void texture_manager_deinit()
     if (texture_manager == NULL)
         return;
 
-    hashmap_destroy(&texture_manager->texture_records, NULL, free);
+    hashmap_destroy(&texture_manager->texture_records, free);
 
     free(texture_manager);
 }

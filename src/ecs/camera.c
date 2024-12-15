@@ -2,14 +2,14 @@
 
 void camera_update()
 {
-    HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
-    HashMap *cameras = &ecs->archetype_component_table[CMP_Camera];
-    ArchetypeRecord *camera_record;
+    HashMap *transforms = &ecs->all_component_archetypes[CMP_Transform];
+    HashMap *cameras = &ecs->all_component_archetypes[CMP_Camera];
+    struct ArchetypeRecord *camera_record;
 
-    hashmap_foreach_data(cameras, camera_record) {
+    hashmap_for_each(cameras, camera_record) {
         Archetype *archetype;
-        ArchetypeRecord *transform_record = hashmap_get(transforms,
-                                            &camera_record->archetype->id);
+        struct ArchetypeRecord *transform_record = hashmap_get(transforms,
+                                                               &camera_record->archetype->id);
 
         if (transform_record == NULL)
             continue;

@@ -14,7 +14,7 @@ static void archetype_destroy(void *arch)
 
     free(archetype->components);
 
-    hashmap_destroy(&archetype->edges, NULL, free);
+    hashmap_destroy(&archetype->edges, free);
 
     free(archetype);
 }
@@ -23,29 +23,31 @@ void ecs_init()
 {
     ecs = malloc(sizeof(ECS));
 
-    array_list_create(&ecs->entities, sizeof(struct ArchetypeRecord), 32);
+    array_list_create(&ecs->entities, sizeof(struct EntityRecord), 32);
     cyclic_queue_create(&ecs->free_entities, sizeof(u64), 64);
 
-    hashmap_create(&ecs->archetypes,
-                   128,
+    hashmap_create(&ecs->archetypes, 7,
+                   offsetof(Archetype, archetypes_hashmap),
+                   offsetof(Archetype, type),
                    archetype_type_hash,
-                   archetype_type_cmp,
-                   0.8f);
+                   archetype_type_cmp, 0.8f);
 
-    for (u64 i = 0; i < CMP_COUNT; i++) {
-        hashmap_create(ecs->archetype_component_table + i,
-                       100,
-                       u64_hash,
-                       u64_cmp,
-                       0.8f);
-    }
+    for (u64 i = 0; i < CMP_COUNT; i++)
+        hashmap_create(ecs->all_component_archetypes + i, 6,
+                       offsetof(struct ArchetypeRecord,
+                                all_component_archetypes_hashmap),
+                       offsetof(struct ArchetypeRecord, id),
+                       u64_hash, u64_cmp, 0.8f);
 
     ecs->root_archetype.id = 0;
     ecs->root_archetype.type.ids = NULL;
     ecs->root_archetype.type.size = 0;
     array_list_create(&ecs->root_archetype.entities, sizeof(u64), 32);
     ecs->root_archetype.components = NULL;
-    hashmap_create(&ecs->root_archetype.edges, 8, u64_hash, u64_cmp, 1.0f);
+    hashmap_create(&ecs->root_archetype.edges, 3,
+                   offsetof(struct ArchetypeEdge, edges_hashmap),
+                   offsetof(struct ArchetypeEdge, component_id),
+                   u64_hash, cmp_id_cmp, 1.0f);
 
     log_debug("ECS initialized");
 }
@@ -58,17 +60,17 @@ void ecs_deinit()
     array_list_destroy(&ecs->entities);
     cyclic_queue_destroy(&ecs->free_entities);
 
-    hashmap_destroy(&ecs->archetypes, NULL, archetype_destroy);
+    hashmap_destroy(&ecs->archetypes, archetype_destroy);
 
     for (ComponentID i = 0; i < CMP_COUNT; i++) {
-        HashMap *curr = &ecs->archetype_component_table[i];
+        HashMap *curr = &ecs->all_component_archetypes[i];
 
-        hashmap_destroy(curr, NULL, free);
+        hashmap_destroy(curr, free);
     }
 
     array_list_destroy(&ecs->root_archetype.entities);
 
-    hashmap_destroy(&ecs->root_archetype.edges, NULL, free);
+    hashmap_destroy(&ecs->root_archetype.edges, free);
 
     free(ecs);
     ecs = NULL;
@@ -78,11 +80,11 @@ void ecs_deinit()
 
 u64 ecs_add_entity()
 {
-    ArchetypeRecord record = {
+    u64 id;
+    struct EntityRecord record = {
         .archetype = &ecs->root_archetype,
         .index = 0
     };
-    u64 id;
 
     if (ecs->free_entities.size == 0) {
         array_list_append(&ecs->entities, &record);
@@ -101,20 +103,18 @@ u64 ecs_add_entity()
 
 void ecs_remove_entity(u64 entity_id)
 {
-    ArchetypeRecord *entity_record =
+    struct EntityRecord *entity_record =
         array_list_offset(&ecs->entities, entity_id);
     Archetype *archetype = entity_record->archetype;
 
-    for (u64 i = 0; i < archetype->type.size; i++) {
+    for (u64 i = 0; i < archetype->type.size; i++)
         array_list_unordered_remove(&archetype->components[i],
-                                    entity_record->index,
-                                    NULL);
-    }
+                                    entity_record->index, NULL);
 
     if (entity_record->index != archetype->entities.size - 1) {
         u64 *last_entity_id = array_list_offset(&archetype->entities,
                                                 archetype->entities.size - 1);
-        ArchetypeRecord *last_entity_record =
+        struct ArchetypeRecord *last_entity_record =
             array_list_offset(&ecs->entities, *last_entity_id);
 
         last_entity_record->index = entity_record->index;
@@ -129,7 +129,8 @@ void ecs_remove_entity(u64 entity_id)
 
 void ecs_add_component(u64 entity_id, ComponentID component_id)
 {
-    ArchetypeRecord *component_record, *entity_record;
+    struct ArchetypeRecord *component_record;
+    struct EntityRecord *entity_record;
     Archetype *archetype, *new_archetype;
     HashMap *component_archetypes;
     struct ArchetypeEdge *edge;
@@ -141,20 +142,19 @@ void ecs_add_component(u64 entity_id, ComponentID component_id)
     if (edge == NULL) {
         edge = calloc(1, sizeof(*edge));
         edge->component_id = component_id;
-        hashmap_add(&archetype->edges, &edge->component_id, edge);
+        hashmap_add(&archetype->edges, edge);
     }
 
     if (edge->add == NULL) {
         ComponentID ids[archetype->type.size + 1];
-        ArchetypeType type;
+        ArchetypeType type = {
+            .ids = ids,
+            .size = archetype->type.size + 1
+        };
 
-        memcpy(ids,
-               archetype->type.ids,
-               sizeof(ComponentID) * archetype->type.size);
+        memcpy(ids, archetype->type.ids,
+               sizeof(*archetype->type.ids) * archetype->type.size);
         ids[archetype->type.size] = component_id;
-
-        type.ids = ids;
-        type.size = archetype->type.size + 1;
 
         ecs_sort_type(&type);
         edge->add = ecs_get_archetype_by_type(&type);
@@ -165,11 +165,11 @@ void ecs_add_component(u64 entity_id, ComponentID component_id)
     for (u64 i = 0; i < archetype->type.size; i++) {
         ComponentID curr_component_id = archetype->type.ids[i];
         HashMap *component_archetypes =
-            &ecs->archetype_component_table[curr_component_id];
-        ArchetypeRecord *component_record =
+            &ecs->all_component_archetypes[curr_component_id];
+        struct ArchetypeRecord *component_record =
             hashmap_get(component_archetypes, &new_archetype->id);
-        void *curr_component =
-            array_list_offset(&archetype->components[i], entity_record->index);
+        void *curr_component = array_list_offset(&archetype->components[i],
+                                                 entity_record->index);
 
         array_list_append(&new_archetype->components[component_record->index],
                           curr_component);
@@ -182,7 +182,7 @@ void ecs_add_component(u64 entity_id, ComponentID component_id)
     if (entity_record->index != archetype->entities.size - 1) {
         u64 *last_entity_id = array_list_offset(&archetype->entities,
                                                 archetype->entities.size - 1);
-        ArchetypeRecord *last_entity_record =
+        struct EntityRecord *last_entity_record =
             array_list_offset(&ecs->entities, *last_entity_id);
 
         last_entity_record->index = entity_record->index;
@@ -197,44 +197,42 @@ void ecs_add_component(u64 entity_id, ComponentID component_id)
 
     array_list_append(&new_archetype->entities, &entity_id);
 
-    component_archetypes = &ecs->archetype_component_table[component_id];
+    component_archetypes = &ecs->all_component_archetypes[component_id];
     component_record = hashmap_get(component_archetypes, &new_archetype->id);
     array_list_append(&new_archetype->components[component_record->index], NULL);
 }
 
 void ecs_remove_component(u64 entity_id, ComponentID component_id)
 {
-    ArchetypeRecord *entity_record =
-        array_list_offset(&ecs->entities, entity_id);
+    struct EntityRecord *entity_record = array_list_offset(&ecs->entities,
+                                                           entity_id);
     Archetype *archetype = entity_record->archetype, *new_archetype;
-    ArchetypeRecord *component_record =
-        hashmap_get(&ecs->archetype_component_table[component_id],
+    struct ArchetypeRecord *component_record =
+        hashmap_get(&ecs->all_component_archetypes[component_id],
                     &archetype->id);
     struct ArchetypeEdge *edge = hashmap_get(&archetype->edges, &component_id);
 
     if (edge == NULL) {
         edge = calloc(1, sizeof(*edge));
         edge->component_id = component_id;
-        hashmap_add(&archetype->edges, &edge->component_id, edge);
+        hashmap_add(&archetype->edges, edge);
     }
 
     if (edge->remove == NULL) {
         ComponentID ids[archetype->type.size];
-        ArchetypeType type;
+        ArchetypeType type = {
+            .ids = ids,
+            .size = archetype->type.size - 1
+        };
 
-        memcpy(ids,
-               archetype->type.ids,
+        memcpy(ids, archetype->type.ids,
                sizeof(ComponentID) * archetype->type.size);
 
-        if (component_record->index != archetype->type.size - 1) {
+        if (component_record->index != archetype->type.size - 1)
             memmove(ids + component_record->index,
                     ids + component_record->index + 1,
                     (sizeof(ComponentID) *
                      (archetype->type.size - component_record->index - 1)));
-        }
-
-        type.ids = ids;
-        type.size = archetype->type.size - 1;
 
         ecs_sort_type(&type);
         edge->remove = ecs_get_archetype_by_type(&type);
@@ -245,8 +243,8 @@ void ecs_remove_component(u64 entity_id, ComponentID component_id)
     for (u64 i = 0; i < new_archetype->type.size; i++) {
         ComponentID curr_component_id = new_archetype->type.ids[i];
         HashMap *component_archetypes =
-            &ecs->archetype_component_table[curr_component_id];
-        ArchetypeRecord *component_record =
+            &ecs->all_component_archetypes[curr_component_id];
+        struct ArchetypeRecord *component_record =
             hashmap_get(component_archetypes, &archetype->id);
         ArrayList *components = &archetype->components[component_record->index];
         void *curr_component =
@@ -263,8 +261,8 @@ void ecs_remove_component(u64 entity_id, ComponentID component_id)
     if (entity_record->index != archetype->entities.size - 1) {
         u64 *last_entity_id = array_list_offset(&archetype->entities,
                                                 archetype->entities.size - 1);
-        ArchetypeRecord *last_entity_record = array_list_offset(&ecs->entities,
-                                              *last_entity_id);
+        struct ArchetypeRecord *last_entity_record =
+            array_list_offset(&ecs->entities, *last_entity_id);
 
         last_entity_record->index = entity_record->index;
     }
@@ -279,12 +277,13 @@ void ecs_remove_component(u64 entity_id, ComponentID component_id)
 
 void *ecs_get_component(u64 entity_id, ComponentID component_id)
 {
-    ArchetypeRecord *entity_record = array_list_offset(&ecs->entities, entity_id);
+    struct EntityRecord *entity_record = array_list_offset(&ecs->entities,
+                                                           entity_id);
     Archetype *archetype = entity_record->archetype;
-
-    HashMap *component_archetypes = &ecs->archetype_component_table[component_id];
-    ArchetypeRecord *component_record = hashmap_get(component_archetypes,
-                                        &archetype->id);
+    HashMap *component_archetypes =
+        &ecs->all_component_archetypes[component_id];
+    struct ArchetypeRecord *component_record = hashmap_get(component_archetypes,
+                                                           &archetype->id);
 
     if (component_record == NULL)
         return NULL;
@@ -300,41 +299,45 @@ void ecs_sort_type(ArchetypeType *type)
     qsort(type->ids, type->size, sizeof(ComponentID), cmp_id_cmp);
 }
 
-Archetype *ecs_get_archetype_by_type(ArchetypeType *type)
+Archetype *ecs_get_archetype_by_type(const ArchetypeType *type)
 {
     Archetype *result = hashmap_get(&ecs->archetypes, type);
 
     if (result)
         return result;
 
-    result = malloc(sizeof(Archetype));
+    result = malloc(sizeof(*result));
     result->id = ecs->archetypes.size + 1;
 
-    result->type.ids = malloc(sizeof(ComponentID) * type->size);
-    memcpy(result->type.ids, type->ids, sizeof(ComponentID) * type->size);
+    result->type.ids = malloc(sizeof(*result->type.ids) * type->size);
+    memcpy(result->type.ids, type->ids, sizeof(*result->type.ids) * type->size);
     result->type.size = type->size;
 
     array_list_create(&result->entities, sizeof(u64), 4);
 
-    result->components = malloc(sizeof(ArrayList) * type->size);
+    result->components = malloc(sizeof(*result->components) * type->size);
     for (u64 i = 0; i < type->size; i++) {
         ComponentID curr_component_id = type->ids[i];
         struct ArchetypeRecord *new_record;
         HashMap *component_archetypes;
 
-        array_list_create(&result->components[i], component_sizes[curr_component_id],
-                          4);
+        array_list_create(result->components + i,
+                          component_sizes[curr_component_id], 4);
 
-        new_record = malloc(sizeof(struct ArchetypeRecord));
+        new_record = malloc(sizeof(*new_record));
+        new_record->id = result->id;
         new_record->archetype = result;
         new_record->index = i;
-        component_archetypes = &ecs->archetype_component_table[curr_component_id];
-        hashmap_add(component_archetypes, &result->id, new_record);
+        component_archetypes = &ecs->all_component_archetypes[curr_component_id];
+        hashmap_add(component_archetypes, new_record);
     }
 
-    hashmap_create(&result->edges, CMP_COUNT, u64_hash, u64_cmp, 1.0f);
+    hashmap_create(&result->edges, 3,
+                   offsetof(struct ArchetypeEdge, edges_hashmap),
+                   offsetof(struct ArchetypeEdge, component_id),
+                   u64_hash, u64_cmp, 1.0f);
 
-    hashmap_add(&ecs->archetypes, &result->type, result);
+    hashmap_add(&ecs->archetypes, result);
 
     return result;
 }

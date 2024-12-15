@@ -37,7 +37,7 @@ static int chunk_thread_pool_worker(void *arg)
 
         switch (task->type) {
         case TASK_GEN_COLUMN:
-            result.result = world_generate_chunk_column(task->arg);
+            result.result = world_generate_chunk_column(&((struct ColInGenWrapper*)task->arg)->vec);
             break;
         case TASK_MESH_CHUNK:
             result.result = chunk_mesh(task->arg);
@@ -138,7 +138,7 @@ void chunk_thread_pool_apply_results()
 
                     chunk_init_buffers(curr_chunk);
                     if (!world_set_chunk(curr_chunk))
-                        hashmap_add(&world->inactive_chunks, &curr_chunk->position, curr_chunk);
+                        hashmap_add(&world->inactive_chunks, curr_chunk);
                     else
                         world_make_neighbors_dirty(&curr_chunk->position);
                 }

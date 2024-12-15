@@ -37,4 +37,13 @@
 #define CLAMP(v, min, max) MAX(min, MIN(max, v))
 #define SIGN(a) ((a > 0) ? 1 : ((a < 0) ? -1 : 0))
 
+#ifdef __GNUC__
+#define container_of(_ptr, _type, _member)   \
+    ({const typeof(((_type *) 0)->_member) *_t = (_ptr); \
+      (_type *)((char *) _t - offsetof(_type, _member));})
+#else
+#define container_of(_ptr, _type, _member)   \
+    ((_type *)((char *) (_ptr) - offsetof(_type, _member)))
+#endif
+
 #endif

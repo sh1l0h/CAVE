@@ -4,9 +4,10 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
 
-#include "../util.h"
-#include "../graphics/mesh.h"
-#include "../graphics/shader.h"
+#include "util.h"
+#include "graphics/mesh.h"
+#include "graphics/shader.h"
+#include "data_structures/hash_map.h"
 
 #define CHUNK_SIZE 16
 #define CHUNK_VOLUME (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
@@ -51,17 +52,17 @@ typedef struct Chunk {
     // [8;11] - Light intensity
     // [0;7]  - Block id
     struct ChunkBlockData *block_data;
+    HashMapNode inactive_chunks_hashmap;
 
     // Number of non-air blocks
     u16 block_count;
 
     // If true, the chuck needs to be remeshed
     bool is_dirty;
+    bool has_buffers;
 
     // Time when the current mesh was tasked to generate
     u32 mesh_time;
-
-    bool has_buffers;
 
     u32 index_count;
     GLuint VAO, VBO, IBO;

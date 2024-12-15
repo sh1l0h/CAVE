@@ -85,15 +85,15 @@ void gizmos_draw_cube(Vec3 *position, Vec3 *scale)
 
 void gizmos_draw()
 {
-    HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
-    HashMap *colliders = &ecs->archetype_component_table[CMP_BoxCollider];
-    ArchetypeRecord *collider_record;
+    HashMap *transforms = &ecs->all_component_archetypes[CMP_Transform];
+    HashMap *colliders = &ecs->all_component_archetypes[CMP_BoxCollider];
+    struct ArchetypeRecord *collider_record;
 
     gizmos_begin();
 
-    hashmap_foreach_data(colliders, collider_record) {
+    hashmap_for_each(colliders, collider_record) {
         Archetype *archetype = collider_record->archetype;
-        ArchetypeRecord *transform_record =
+        struct ArchetypeRecord *transform_record =
             hashmap_get(transforms, &archetype->id);
 
         if (transform_record == NULL)

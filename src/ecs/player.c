@@ -83,13 +83,13 @@ u64 player_create(const Vec3 *pos)
 
 void player_update_state()
 {
-    HashMap *players = &ecs->archetype_component_table[CMP_Player],
-            *transforms = &ecs->archetype_component_table[CMP_Transform],
-            *collider = &ecs->archetype_component_table[CMP_BoxCollider];
-    ArchetypeRecord *player_record;
+    HashMap *players = &ecs->all_component_archetypes[CMP_Player],
+            *transforms = &ecs->all_component_archetypes[CMP_Transform],
+            *collider = &ecs->all_component_archetypes[CMP_BoxCollider];
+    struct ArchetypeRecord *player_record;
 
-    hashmap_foreach_data(players, player_record) {
-        ArchetypeRecord *collider_record, *transform_record;
+    hashmap_for_each(players, player_record) {
+        struct ArchetypeRecord *collider_record, *transform_record;
         Archetype *archetype;
 
         transform_record = hashmap_get(transforms, &player_record->archetype->id);
@@ -201,14 +201,14 @@ static bool player_should_be_constrained_by_sneaking(const Vec3 *position,
 
 void player_update_movement(f32 dt)
 {
-    HashMap *players = &ecs->archetype_component_table[CMP_Player];
-    HashMap *transforms = &ecs->archetype_component_table[CMP_Transform];
-    HashMap *rbs = &ecs->archetype_component_table[CMP_RigidBody];
-    HashMap *collider = &ecs->archetype_component_table[CMP_BoxCollider];
-    ArchetypeRecord *player_record;
+    HashMap *players = &ecs->all_component_archetypes[CMP_Player],
+            *transforms = &ecs->all_component_archetypes[CMP_Transform],
+            *rbs = &ecs->all_component_archetypes[CMP_RigidBody],
+            *collider = &ecs->all_component_archetypes[CMP_BoxCollider];
+    struct ArchetypeRecord *player_record;
 
-    hashmap_foreach_data(players, player_record) {
-        ArchetypeRecord *collider_record, *rb_record, *transform_record;
+    hashmap_for_each(players, player_record) {
+        struct ArchetypeRecord *collider_record, *rb_record, *transform_record;
         Archetype *archetype;
 
         transform_record = hashmap_get(transforms, &player_record->archetype->id);

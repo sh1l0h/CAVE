@@ -1,11 +1,11 @@
 #ifndef CAVE_ECS_H
 #define CAVE_ECS_H
 
-#include "../data_structures/cyclic_queue.h"
-#include "../data_structures/array_list.h"
-#include "../data_structures/hash_map.h"
-#include "./components.h"
-#include "../util.h"
+#include "data_structures/cyclic_queue.h"
+#include "data_structures/array_list.h"
+#include "data_structures/hash_map.h"
+#include "components.h"
+#include "util.h"
 
 typedef struct ArchetypeType {
     ComponentID *ids;
@@ -15,6 +15,8 @@ typedef struct ArchetypeType {
 typedef struct Archetype {
     u64 id;
     ArchetypeType type;
+
+    HashMapNode archetypes_hashmap;
 
     // Stores entity IDs:
     // All the components in the i-th column in 'components' array belong to the entity with the i-th ID stored here.
@@ -32,12 +34,20 @@ struct ArchetypeEdge {
     ComponentID component_id;
     Archetype *add;
     Archetype *remove;
+    HashMapNode edges_hashmap;
 };
 
-typedef struct ArchetypeRecord {
+struct EntityRecord {
     Archetype *archetype;
     u64 index;
-} ArchetypeRecord;
+};
+
+struct ArchetypeRecord {
+    u64 id;
+    u64 index;
+    Archetype *archetype;
+    HashMapNode all_component_archetypes_hashmap;
+};
 
 typedef struct ECS {
     u64 player_id;
@@ -55,7 +65,7 @@ typedef struct ECS {
     // Each hash map maps archetype IDs to archetype records,
     // where index is a row in the 'components' array;
     // Each hash map contains all the archetypes storing the corresponding component
-    HashMap archetype_component_table[CMP_COUNT];
+    HashMap all_component_archetypes[CMP_COUNT];
 
     // Represents the root archetype with no components.
     Archetype root_archetype;
@@ -75,7 +85,7 @@ void *ecs_get_component(u64 entity_id, ComponentID component_id);
 
 void ecs_sort_type(ArchetypeType *type);
 
-Archetype *ecs_get_archetype_by_type(ArchetypeType *type);
+Archetype *ecs_get_archetype_by_type(const ArchetypeType *type);
 
 u64 archetype_type_hash(const void *key);
 i32 archetype_type_cmp(const void *key, const void *arg);

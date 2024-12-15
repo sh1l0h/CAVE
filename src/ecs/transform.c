@@ -2,10 +2,10 @@
 
 void transform_update()
 {
-    HashMap *entities = &ecs->archetype_component_table[CMP_Transform];
-    ArchetypeRecord *record;
+    HashMap *entities = &ecs->all_component_archetypes[CMP_Transform];
+    struct ArchetypeRecord *record;
 
-    hashmap_foreach_data(entities, record) {
+    hashmap_for_each(entities, record) {
         Archetype *archetype = record->archetype;
 
         for (u64 j = 0; j < archetype->entities.size; j++) {
