@@ -8,6 +8,8 @@
 #define CHUNK_THREAD_COUNT 11
 #define CHUNK_THREAD_NUMBER_OF_APPLY_TRIES 3
 
+#define chunk_thread_task_get_data(_task) ((void *)((_task)->data))
+
 typedef enum ChunkThreadTaskType {
     TASK_GEN_COLUMN,
     TASK_MESH_CHUNK
@@ -15,9 +17,8 @@ typedef enum ChunkThreadTaskType {
 
 typedef struct ChunkThreadTask {
     ChunkTreadTaskType type;
-    void *arg;
-    void *result;
     struct ChunkThreadTask *next;
+    char data[];
 } ChunkThreadTask;
 
 typedef struct ChunkThreadPool {
@@ -38,6 +39,8 @@ typedef struct ChunkThreadPool {
 } ChunkThreadPool;
 
 extern ChunkThreadPool *chunk_thread_pool;
+
+ChunkThreadTask *chunk_thread_task_alloc(ChunkTreadTaskType type);
 
 void chunk_thread_pool_init();
 void chunk_thread_pool_deinit();

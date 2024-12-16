@@ -32,10 +32,10 @@ static int chunk_thread_pool_worker(void *arg)
 
         switch (task->type) {
         case TASK_GEN_COLUMN:
-            task->result = world_generate_chunk_column(&((struct ColInGenWrapper*)task->arg)->vec);
+            world_generate_chunk_column(chunk_thread_task_get_data(task));
             break;
         case TASK_MESH_CHUNK:
-            task->result = chunk_mesh(task->arg);
+            chunk_mesh(chunk_thread_task_get_data(task));
             break;
         }
 
@@ -63,6 +63,20 @@ static int chunk_thread_pool_worker(void *arg)
 
     log_debug("Thread with ID %lu finished", SDL_ThreadID());
     return 0;
+}
+
+const size_t chunk_thread_task_data_size[] = {
+    [TASK_GEN_COLUMN] = sizeof(struct ColumnGenTaskData),
+    [TASK_MESH_CHUNK] = sizeof(struct ChunkMeshTaskData)
+};
+
+ChunkThreadTask *chunk_thread_task_alloc(ChunkTreadTaskType type)
+{
+    ChunkThreadTask *result = calloc(1, sizeof(*result) +
+                                     chunk_thread_task_data_size[type]);
+
+    result->type = type;
+    return result;
 }
 
 void chunk_thread_pool_init()
@@ -116,12 +130,12 @@ void chunk_thread_pool_apply_results()
         switch(curr->type) {
         case TASK_GEN_COLUMN:
             {
-                Chunk **column = curr->result;
+                struct ColumnGenTaskData *task_data = chunk_thread_task_get_data(curr);
 
-                hashmap_remove(&world->columns_in_generation, curr->arg);
+                hashmap_remove(&world->columns_in_generation, &task_data->vec);
 
                 for(i32 y = 0; y < CHUNK_COLUMN_HEIGHT; y++) {
-                    Chunk *curr_chunk = column[y];
+                    Chunk *curr_chunk = task_data->column[y];
 
                     chunk_init_buffers(curr_chunk);
                     if (!world_set_chunk(curr_chunk))
@@ -129,21 +143,19 @@ void chunk_thread_pool_apply_results()
                     else
                         world_make_neighbors_dirty(&curr_chunk->position);
                 }
-
-                free(column);
             }
             break;
         case TASK_MESH_CHUNK:
             {
-                struct ChunkMeshArg *arg = curr->arg;
-                Mesh *mesh = curr->result;
-                Chunk *chunk = world_get_chunk(&arg->chunk_pos);
+                struct ChunkMeshTaskData *task_data = chunk_thread_task_get_data(curr);
+                Mesh *mesh = &task_data->result;
+                Chunk *chunk = world_get_chunk(&task_data->chunk_pos);
 
                 if (chunk == NULL)
-                    chunk = hashmap_get(&world->inactive_chunks, &arg->chunk_pos);
+                    chunk = hashmap_get(&world->inactive_chunks, &task_data->chunk_pos);
 
-                if (chunk != NULL && chunk->mesh_time < arg->mesh_time) {
-                    chunk->mesh_time = arg->mesh_time;
+                if (chunk != NULL && chunk->mesh_time < task_data->mesh_time) {
+                    chunk->mesh_time = task_data->mesh_time;
                     glBindVertexArray(chunk->VAO);
                     glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);
                     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->IBO);
@@ -155,21 +167,19 @@ void chunk_thread_pool_apply_results()
                     chunk->index_count = mesh->index_count;
                 }
 
-                mesh_destroy(curr->result);
-                free(mesh);
+                mesh_destroy(mesh);
 
                 for (u8 i = 0; i < 27; i++) {
-                    if (arg->block_data[i] == NULL)
+                    if (task_data->block_data[i] == NULL)
                         continue;
-                    arg->block_data[i]->owner_count--;
-                    if (arg->block_data[i]->owner_count == 0)
-                        free(arg->block_data[i]);
+                    task_data->block_data[i]->owner_count--;
+                    if (task_data->block_data[i]->owner_count == 0)
+                        free(task_data->block_data[i]);
                 }
             }
             break;
         }
 
-        free(curr->arg);
         free(curr);
 
         curr = next;

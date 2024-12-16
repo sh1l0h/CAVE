@@ -12,8 +12,9 @@
 
 #define CHUNK_COLUMN_HEIGHT 15
 
-struct ColInGenWrapper {
+struct ColumnGenTaskData {
     Vec2i vec;
+    Chunk *column[CHUNK_COLUMN_HEIGHT];
     HashMapNode columns_in_generation_hashmap;
 };
 
@@ -44,7 +45,7 @@ void world_update();
 
 void world_render();
 
-Chunk **world_generate_chunk_column(Vec2i *column_position);
+void world_generate_chunk_column(struct ColumnGenTaskData *data);
 
 bool world_set_chunk(Chunk *chunk);
 

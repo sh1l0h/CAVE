@@ -20,8 +20,8 @@
 
 #define UNIT_UV_OFFSET (1.0f / 16.0f)
 
-#define CHUNK_IN_BOUNDS(pos) ((pos).x >= 0 && (pos).x < CHUNK_SIZE &&	\
-                              (pos).y >= 0 && (pos).y < CHUNK_SIZE &&	\
+#define CHUNK_IN_BOUNDS(pos) ((pos).x >= 0 && (pos).x < CHUNK_SIZE && \
+                              (pos).y >= 0 && (pos).y < CHUNK_SIZE && \
                               (pos).z >= 0 && (pos).z < CHUNK_SIZE)
 
 #define CHUNK_ON_BOUNDS(pos) ((pos).x == 0 || (pos).x == CHUNK_SIZE - 1 || \
@@ -30,16 +30,18 @@
 
 #define CHUNK_OFFSET_2_INDEX(pos) ((pos).y + (pos).x*CHUNK_SIZE + (pos).z*CHUNK_SIZE*CHUNK_SIZE)
 
+
 struct ChunkBlockData {
     u64 owner_count;
     u16 data[];
 };
 
-struct ChunkMeshArg {
+struct ChunkMeshTaskData {
     u32 mesh_time;
     Vec3i chunk_pos;
     // 3D array of chunk block data
     struct ChunkBlockData *block_data[27];
+    Mesh result;
 };
 
 typedef struct Chunk {
@@ -97,7 +99,7 @@ void chunk_destroy(Chunk *chunk);
 
 void chunk_update(Chunk *chunk);
 
-Mesh *chunk_mesh(struct ChunkMeshArg *arg);
+void chunk_mesh(struct ChunkMeshTaskData *data);
 
 void chunk_render(Chunk *chunk);
 

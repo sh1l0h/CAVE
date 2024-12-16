@@ -65,7 +65,7 @@ static void world_center_around_position(World *world, Vec3 *pos)
                 Chunk **curr = world->chunks + world_offset_to_index(&offset),
                       *chunk;
                 ChunkThreadTask *task;
-                struct ColInGenWrapper *wrapper;
+                struct ColumnGenTaskData *task_data;
 
                 if (*curr != NULL)
                     continue;
@@ -101,17 +101,14 @@ static void world_center_around_position(World *world, Vec3 *pos)
                 if (chunk_pos.y < 0)
                     continue;
 
-                wrapper = malloc(sizeof(*wrapper));
-                wrapper->vec.x = chunk_pos.x;
-                wrapper->vec.y = chunk_pos.z;
-
-                task = malloc(sizeof(*task));
-                task->type = TASK_GEN_COLUMN;
-                task->arg = wrapper;
+                task = chunk_thread_task_alloc(TASK_GEN_COLUMN);
+                task_data = chunk_thread_task_get_data(task);
+                task_data->vec.x = chunk_pos.x;
+                task_data->vec.y = chunk_pos.z;
 
                 chunk_thread_pool_add_task(task);
 
-                hashmap_add(&world->columns_in_generation, wrapper);
+                hashmap_add(&world->columns_in_generation, task_data);
             }
         }
     }
@@ -137,8 +134,8 @@ void world_create(i32 size_x, i32 size_y, i32 size_z)
                    vec3i_hash, vec3i_cmp, 0.8f);
 
     hashmap_create(&world->columns_in_generation, 10,
-                   offsetof(struct ColInGenWrapper, columns_in_generation_hashmap),
-                   offsetof(struct ColInGenWrapper, vec),
+                   offsetof(struct ColumnGenTaskData, columns_in_generation_hashmap),
+                   offsetof(struct ColumnGenTaskData, vec),
                    vec2i_hash, vec2i_cmp, 0.8f);
 
     world->chunks_size = ZINC_VEC3I(size_x, size_y, size_z);
@@ -169,13 +166,13 @@ void world_destroy()
     free(world);
 }
 
-Chunk **world_generate_chunk_column(Vec2i *column_position)
+void world_generate_chunk_column(struct ColumnGenTaskData *data)
 {
-    Chunk **column = malloc(sizeof(Chunk *)*CHUNK_COLUMN_HEIGHT);
-    Vec2i column_pos_in_blocks;
+    Chunk **column = data->column;
+    Vec2i *column_position = &data->vec, column_pos_in_blocks;
 
     for (i32 i = 0; i < CHUNK_COLUMN_HEIGHT; i++) {
-        column[i] = malloc(sizeof(Chunk));
+        column[i] = malloc(sizeof(*column[i]));
         chunk_create(column[i],
                      &ZINC_VEC3I(column_position->x, i, column_position->y));
     }
@@ -231,8 +228,6 @@ Chunk **world_generate_chunk_column(Vec2i *column_position)
             }
         }
     }
-
-    return column;
 }
 
 inline void world_update()

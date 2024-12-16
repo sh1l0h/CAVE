@@ -337,7 +337,7 @@ static void chunk_append_face(Mesh *mesh, Vec3i *pos, Direction direction,
     mesh->index_count += 6;
 }
 
-static u16 chunk_mesh_arg_get_block(struct ChunkMeshArg *arg,
+static u16 chunk_mesh_arg_get_block(struct ChunkMeshTaskData *arg,
                                     const Vec3i *offset)
 {
 
@@ -355,17 +355,15 @@ static u16 chunk_mesh_arg_get_block(struct ChunkMeshArg *arg,
     return block_data->data[CHUNK_OFFSET_2_INDEX(block_offset)];
 }
 
-Mesh *chunk_mesh(struct ChunkMeshArg *arg)
+void chunk_mesh(struct ChunkMeshTaskData *task_data)
 {
-    Mesh *result = malloc(sizeof(Mesh));
-
-    mesh_create(result);
+    mesh_create(&task_data->result);
 
     for (i32 z = 0; z < CHUNK_SIZE; z++) {
         for (i32 y = 0; y < CHUNK_SIZE; y++) {
             for (i32 x = 0; x < CHUNK_SIZE; x++) {
                 Vec3i offset = {{x, y, z}};
-                u32 data = chunk_mesh_arg_get_block(arg, &offset);
+                u32 data = chunk_mesh_arg_get_block(task_data, &offset);
                 u16 id = data & BLOCK_ID_MASK;
 
                 if (id == BLOCK_AIR)
@@ -379,7 +377,7 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
                     direction_get_norm(dir, &facing_block_pos);
                     zinc_vec3i_add(&facing_block_pos, &offset, &facing_block_pos);
 
-                    block_id = chunk_mesh_arg_get_block(arg, &facing_block_pos);
+                    block_id = chunk_mesh_arg_get_block(task_data, &facing_block_pos);
                     if (!blocks[block_id].is_transparent)
                         continue;
 
@@ -391,33 +389,28 @@ Mesh *chunk_mesh(struct ChunkMeshArg *arg)
 
                         zinc_vec3i_add(block_offset, &offset, &block_pos);
 
-                        block_id = chunk_mesh_arg_get_block(arg, &block_pos);
+                        block_id = chunk_mesh_arg_get_block(task_data, &block_pos);
                         neighboring_blocks[i] = !blocks[block_id].is_transparent;
                     }
 
                     neighboring_blocks[8] = neighboring_blocks[0];
 
-                    chunk_append_face(result, &offset, dir, blocks[id].textures[dir],
+                    chunk_append_face(&task_data->result, &offset, dir, blocks[id].textures[dir],
                                       neighboring_blocks);
                 }
             }
         }
     }
-
-    return result;
 }
 
-static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
+static void chunk_mesh_arg_create(Chunk *chunk, struct ChunkMeshTaskData *task_data)
 {
-    struct ChunkMeshArg *arg = calloc(1, sizeof(struct ChunkMeshArg));
-
-    arg->mesh_time = SDL_GetTicks();
-    zinc_vec3i_copy(&chunk->position, &arg->chunk_pos);
+    task_data->mesh_time = SDL_GetTicks();
+    zinc_vec3i_copy(&chunk->position, &task_data->chunk_pos);
 
     for (i32 z = -1; z <= 1; z++) {
         for (i32 x = -1; x <= 1; x++) {
             for (i32 y = -1; y <= 1; y++) {
-
                 Vec3i pos = ZINC_VEC3I_INIT(x + chunk->position.x,
                                             y + chunk->position.y,
                                             z + chunk->position.z);
@@ -428,12 +421,10 @@ static struct ChunkMeshArg *chunk_mesh_arg_create(Chunk *chunk)
 
                 chunk->block_data->owner_count++;
 
-                arg->block_data[(y + 1) + (x + 1) * 3 + (z + 1) * 9] = chunk->block_data;
+                task_data->block_data[(y + 1) + (x + 1) * 3 + (z + 1) * 9] = chunk->block_data;
             }
         }
     }
-
-    return arg;
 }
 
 
@@ -452,12 +443,10 @@ void chunk_render(Chunk *chunk)
         return;
 
     if (chunk->is_dirty) {
-        struct ChunkMeshArg *arg = chunk_mesh_arg_create(chunk);
-        ChunkThreadTask *task = malloc(sizeof(ChunkThreadTask));
+        ChunkThreadTask *task = chunk_thread_task_alloc(TASK_MESH_CHUNK);
+        struct ChunkMeshTaskData *task_data = chunk_thread_task_get_data(task);
 
-        task->type = TASK_MESH_CHUNK;
-        task->arg = arg;
-
+        chunk_mesh_arg_create(chunk, task_data);
         chunk_thread_pool_add_task(task);
 
         chunk->is_dirty = false;
