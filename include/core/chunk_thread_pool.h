@@ -6,6 +6,7 @@
 #include <SDL2/SDL_thread.h>
 
 #define CHUNK_THREAD_COUNT 11
+#define CHUNK_THREAD_NUMBER_OF_APPLY_TRIES 3
 
 typedef enum ChunkThreadTaskType {
     TASK_GEN_COLUMN,
@@ -15,14 +16,9 @@ typedef enum ChunkThreadTaskType {
 typedef struct ChunkThreadTask {
     ChunkTreadTaskType type;
     void *arg;
+    void *result;
     struct ChunkThreadTask *next;
 } ChunkThreadTask;
-
-struct ChunkThreadResult {
-    ChunkTreadTaskType type;
-    void *arg;
-    void *result;
-};
 
 typedef struct ChunkThreadPool {
     SDL_Thread *threads[CHUNK_THREAD_COUNT];
@@ -38,8 +34,7 @@ typedef struct ChunkThreadPool {
     SDL_cond *cond_work;
     bool stop;
 
-    SDL_mutex *results_mutex;
-    ArrayList results;
+    ChunkThreadTask *result_stack_head;
 } ChunkThreadPool;
 
 extern ChunkThreadPool *chunk_thread_pool;

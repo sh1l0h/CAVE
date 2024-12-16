@@ -9,8 +9,7 @@ static int chunk_thread_pool_worker(void *arg)
     log_debug("Thread with ID %lu started", SDL_ThreadID());
 
     while (true) {
-        struct ChunkThreadResult result;
-        ChunkThreadTask *task;
+        ChunkThreadTask *task, *result_stuck_head;
 
         SDL_LockMutex(chunk_thread_pool->mutex);
 
@@ -31,24 +30,21 @@ static int chunk_thread_pool_worker(void *arg)
 
         SDL_UnlockMutex(chunk_thread_pool->mutex);
 
-        result.type = task->type;
-        result.arg = task->arg;
-        result.result = NULL;
-
         switch (task->type) {
         case TASK_GEN_COLUMN:
-            result.result = world_generate_chunk_column(&((struct ColInGenWrapper*)task->arg)->vec);
+            task->result = world_generate_chunk_column(&((struct ColInGenWrapper*)task->arg)->vec);
             break;
         case TASK_MESH_CHUNK:
-            result.result = chunk_mesh(task->arg);
+            task->result = chunk_mesh(task->arg);
             break;
         }
 
-        free(task);
+        do {
+            result_stuck_head = SDL_AtomicGetPtr((void **)&chunk_thread_pool->result_stack_head);
 
-        SDL_LockMutex(chunk_thread_pool->results_mutex);
-        array_list_append(&chunk_thread_pool->results, &result);
-        SDL_UnlockMutex(chunk_thread_pool->results_mutex);
+            task->next = result_stuck_head;
+        } while (!SDL_AtomicCASPtr((void **)&chunk_thread_pool->result_stack_head,
+                                   result_stuck_head, task));
 
         SDL_LockMutex(chunk_thread_pool->mutex);
 
@@ -80,9 +76,7 @@ void chunk_thread_pool_init()
     chunk_thread_pool->working_count = 0;
     chunk_thread_pool->stop = false;
     chunk_thread_pool->thread_count = CHUNK_THREAD_COUNT;
-    chunk_thread_pool->results_mutex = SDL_CreateMutex();
-    array_list_create(&chunk_thread_pool->results, sizeof(struct ChunkThreadResult),
-                      1024);
+    chunk_thread_pool->result_stack_head = NULL;
 
     for (i32 i = 0; i < CHUNK_THREAD_COUNT; i++)
         chunk_thread_pool->threads[i] = SDL_CreateThread(chunk_thread_pool_worker,
@@ -97,34 +91,27 @@ void chunk_thread_pool_deinit()
 
     SDL_DestroyMutex(chunk_thread_pool->mutex);
 
-    SDL_DestroyMutex(chunk_thread_pool->results_mutex);
-    array_list_destroy(&chunk_thread_pool->results);
-
     free(chunk_thread_pool);
 }
 
 void chunk_thread_pool_apply_results()
 {
-    struct ChunkThreadResult *results;
-    u64 size;
+    struct ChunkThreadTask *curr;
+    i32 number_of_tries = CHUNK_THREAD_NUMBER_OF_APPLY_TRIES;
 
-    SDL_LockMutex(chunk_thread_pool->results_mutex);
+    do {
+        if (number_of_tries-- <= 0)
+            return;
 
-    if (chunk_thread_pool->results.size == 0) {
-        SDL_UnlockMutex(chunk_thread_pool->results_mutex);
-        return;
-    }
+        curr = SDL_AtomicGetPtr((void **)&chunk_thread_pool->result_stack_head);
 
-    results = (struct ChunkThreadResult *) chunk_thread_pool->results.data;
-    size = chunk_thread_pool->results.size;
+        if (!curr)
+            return;
+    } while (!SDL_AtomicCASPtr((void **)&chunk_thread_pool->result_stack_head,
+                               curr, NULL));
 
-    chunk_thread_pool->results.data = malloc(chunk_thread_pool->results.allocated_bytes);
-    chunk_thread_pool->results.size = 0;
-
-    SDL_UnlockMutex(chunk_thread_pool->results_mutex);
-
-    for(u64 i = 0; i < size; i++) {
-        struct ChunkThreadResult *curr = &results[i];
+    while (curr != NULL) {
+        struct ChunkThreadTask *next = curr->next;
 
         switch(curr->type) {
         case TASK_GEN_COLUMN:
@@ -183,9 +170,11 @@ void chunk_thread_pool_apply_results()
         }
 
         free(curr->arg);
+        free(curr);
+
+        curr = next;
     }
 
-    free(results);
 }
 
 void chunk_thread_pool_add_task(ChunkThreadTask *task)
