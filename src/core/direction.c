@@ -1,4 +1,4 @@
-#include "../../include/core/direction.h"
+#include "core/direction.h"
 
 static Vec3i direction_norm[DIR_COUNT] = {
     [DIR_NORTH]  = ZINC_VEC3I_INIT( 0,  0,  1),

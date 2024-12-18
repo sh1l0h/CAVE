@@ -1,4 +1,4 @@
-#include "../../include/core/mouse.h"
+#include "core/mouse.h"
 
 Mouse mouse;
 

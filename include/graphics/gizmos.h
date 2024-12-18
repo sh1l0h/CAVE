@@ -1,8 +1,8 @@
 #ifndef CAVE_GIZMOS_H
 #define CAVE_GIZMOS_H
 
-#include "../util.h"
-#include "./shader.h"
+#include "util.h"
+#include "shader.h"
 
 typedef struct Gizmos {
     Vec4 color;

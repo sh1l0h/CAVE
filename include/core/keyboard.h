@@ -1,7 +1,7 @@
 #ifndef CAVE_KEYBOARD_H
 #define CAVE_KEYBOARD_H
 
-#include "../util.h"
+#include "util.h"
 #include <SDL2/SDL.h>
 
 #define KEY_CONFIG_PATH "./res/configs/keys.json"

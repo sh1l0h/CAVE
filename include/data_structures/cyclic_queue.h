@@ -1,7 +1,7 @@
 #ifndef CAVE_CYCLIC_QUEUE_H
 #define CAVE_CYCLIC_QUEUE_H
 
-#include "../util.h"
+#include "util.h"
 
 typedef struct CyclicQueue {
     u8 *data;

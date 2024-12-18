@@ -1,8 +1,8 @@
-#include "../../include/world/chunk.h"
-#include "../../include/world/world.h"
-#include "../../include/core/chunk_thread_pool.h"
-#include "../../include/world/block.h"
-#include "../../include/ecs/ecs.h"
+#include "world/chunk.h"
+#include "world/world.h"
+#include "core/chunk_thread_pool.h"
+#include "world/block.h"
+#include "ecs/ecs.h"
 #include <SDL2/SDL.h>
 
 #define DATA_X_OFFSET 0u

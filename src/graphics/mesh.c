@@ -1,4 +1,4 @@
-#include "../../include/graphics/mesh.h"
+#include "graphics/mesh.h"
 
 void mesh_create(Mesh *mesh)
 {

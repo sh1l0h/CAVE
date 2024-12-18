@@ -1,4 +1,4 @@
-#include "../../include/graphics/texture_manager.h"
+#include "graphics/texture_manager.h"
 #include <dirent.h>
 
 #define STB_IMAGE_IMPLEMENTATION

@@ -1,8 +1,8 @@
 #ifndef CAVE_TEXTURE_ARRAY_H
 #define CAVE_TEXTURE_ARRAY_H
 
-#include "../util.h"
-#include "../data_structures/hash_map.h"
+#include "util.h"
+#include "data_structures/hash_map.h"
 #include <GL/glew.h>
 
 typedef enum TextureType {

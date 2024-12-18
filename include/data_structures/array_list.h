@@ -1,7 +1,7 @@
 #ifndef CAVE_ARRAY_LIST_H
 #define CAVE_ARRAY_LIST_H
 
-#include "../util.h"
+#include "util.h"
 
 typedef struct ArrayList {
     u8 *data;

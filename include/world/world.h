@@ -1,12 +1,12 @@
 #ifndef CAVE_WORLD_H
 #define CAVE_WORLD_H
 
-#include "../data_structures/array_list.h"
-#include "../data_structures/hash_map.h"
-#include "../graphics/shader.h"
-#include "../core/noise.h"
-#include "../util.h"
-#include "./chunk.h"
+#include "data_structures/array_list.h"
+#include "data_structures/hash_map.h"
+#include "graphics/shader.h"
+#include "core/noise.h"
+#include "util.h"
+#include "chunk.h"
 
 #define WORLD_VOLUME (world->chunks_size.x * world->chunks_size.y * world->chunks_size.z)
 

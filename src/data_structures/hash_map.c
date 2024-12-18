@@ -1,4 +1,4 @@
-#include "../../include/data_structures/hash_map.h"
+#include "data_structures/hash_map.h"
 
 void hashmap_node_create(HashMapNode *node)
 {

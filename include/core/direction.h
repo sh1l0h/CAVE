@@ -1,7 +1,7 @@
 #ifndef CAVE_DIRECTION_H
 #define CAVE_DIRECTION_H
 
-#include "../util.h"
+#include "util.h"
 
 typedef enum Direction {
     DIR_NORTH = 0,

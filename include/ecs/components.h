@@ -1,8 +1,8 @@
 #ifndef CAVE_COMPONENTS_H
 #define CAVE_COMPONENTS_H
 
-#include "../util.h"
-#include "../world/chunk.h"
+#include "util.h"
+#include "world/chunk.h"
 
 #define COMPONENTS \
     X(Transform)   \

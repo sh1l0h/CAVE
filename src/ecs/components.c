@@ -1,4 +1,4 @@
-#include "../../include/ecs/components.h"
+#include "ecs/components.h"
 
 u32 component_sizes[CMP_COUNT] = {
 #define X(_name) [CMP_##_name] = sizeof(_name),

@@ -1,5 +1,5 @@
-#include "../../include/ecs/ecs.h"
-#include "../../include/world/world.h"
+#include "ecs/ecs.h"
+#include "world/world.h"
 
 static void rigidbody_check_collision(Transform *transform,
                                       BoxCollider *collider,

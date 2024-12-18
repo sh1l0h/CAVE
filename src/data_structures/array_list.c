@@ -1,4 +1,4 @@
-#include "../../include/data_structures/array_list.h"
+#include "data_structures/array_list.h"
 
 void array_list_create(ArrayList *list, u32 element_size, u64 initial_size)
 {

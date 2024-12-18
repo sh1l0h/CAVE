@@ -1,7 +1,7 @@
 #ifndef CAVE_LOG_H
 #define CAVE_LOG_H
 
-#include "../util.h"
+#include "util.h"
 #include <SDL2/SDL_thread.h>
 #include <stdarg.h>
 #include <time.h>

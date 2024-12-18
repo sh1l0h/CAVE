@@ -1,4 +1,4 @@
-#include "../../include/ecs/ecs.h"
+#include "ecs/ecs.h"
 
 ECS *ecs;
 

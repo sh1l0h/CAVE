@@ -1,7 +1,7 @@
 #ifndef CAVE_MESH_BUFFER_H
 #define CAVE_MESH_BUFFER_H
 
-#include "../util.h"
+#include "util.h"
 
 typedef struct MeshBuffer {
     void *data;

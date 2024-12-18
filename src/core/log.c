@@ -1,4 +1,4 @@
-#include "../../include/core/log.h"
+#include "core/log.h"
 
 SDL_mutex *log_mutex;
 

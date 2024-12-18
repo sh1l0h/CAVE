@@ -1,8 +1,8 @@
 #ifndef CAVE_SYSTEMS_H
 #define CAVE_SYSTEMS_H
 
-#include "../util.h"
-#include "./ecs.h"
+#include "util.h"
+#include "ecs.h"
 
 void transform_update();
 

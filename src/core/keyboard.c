@@ -1,6 +1,6 @@
-#include "../../include/core/keyboard.h"
-#include "../../include/core/io.h"
-#include "../../lib/cJSON/cJSON.h"
+#include "core/keyboard.h"
+#include "core/io.h"
+#include "cJSON/cJSON.h"
 
 static Keyboard keyboard;
 static const char *key_names[KEY_COUNT] = {

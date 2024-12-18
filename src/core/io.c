@@ -1,4 +1,4 @@
-#include "../../include/core/io.h"
+#include "core/io.h"
 
 char *read_text_from_file(const char *path, u64 *length)
 {

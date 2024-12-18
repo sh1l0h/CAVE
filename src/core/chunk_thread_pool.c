@@ -1,5 +1,5 @@
-#include "../../include/core/chunk_thread_pool.h"
-#include "../../include/world/world.h"
+#include "core/chunk_thread_pool.h"
+#include "world/world.h"
 
 ChunkThreadPool *chunk_thread_pool = NULL;
 

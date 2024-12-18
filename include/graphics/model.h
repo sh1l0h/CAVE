@@ -1,8 +1,8 @@
 #ifndef CAVE_MODEL_H
 #define CAVE_MODEL_H
 
-#include "../util.h"
-#include "../data_structures/hash_map.h"
+#include "util.h"
+#include "data_structures/hash_map.h"
 
 typedef struct Face {
     Direction cull_dir;

@@ -1,7 +1,7 @@
 #ifndef CAVE_SHADER_H
 #define CAVE_SHADER_H
 
-#include "../util.h"
+#include "util.h"
 #include <GL/glew.h>
 
 typedef struct Shader {

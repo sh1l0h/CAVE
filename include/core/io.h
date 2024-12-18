@@ -1,7 +1,7 @@
 #ifndef CAVE_IO_H
 #define CAVE_IO_H
 
-#include "../util.h"
+#include "util.h"
 
 #define FILE_CHUNK_SIZE 128
 

@@ -1,5 +1,5 @@
-#include "../../include/world/block.h"
-#include "../../include/graphics/texture_manager.h"
+#include "world/block.h"
+#include "graphics/texture_manager.h"
 
 Block blocks[BLOCK_COUNT];
 

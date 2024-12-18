@@ -1,7 +1,7 @@
 #ifndef CAVE_MOUSE_H
 #define CAVE_MOUSE_H
 
-#include "../util.h"
+#include "util.h"
 #include <SDL2/SDL.h>
 
 typedef enum MouseButton {

@@ -4,15 +4,15 @@
 #include <SDL2/SDL_opengl.h>
 #include <time.h>
 
-#include "../include/core/chunk_thread_pool.h"
-#include "../include/core/mouse.h"
-#include "../include/core/keyboard.h"
-#include "../include/graphics/gizmos.h"
-#include "../include/graphics/texture_manager.h"
-#include "../include/world/world.h"
-#include "../include/world/block.h"
-#include "../include/ecs/systems.h"
-#include "../include/ecs/ecs.h"
+#include "core/chunk_thread_pool.h"
+#include "core/mouse.h"
+#include "core/keyboard.h"
+#include "graphics/gizmos.h"
+#include "graphics/texture_manager.h"
+#include "world/world.h"
+#include "world/block.h"
+#include "ecs/systems.h"
+#include "ecs/ecs.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../lib/stb/stb_image_write.h"

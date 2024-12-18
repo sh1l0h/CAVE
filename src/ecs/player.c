@@ -1,7 +1,7 @@
-#include "../../include/ecs/ecs.h"
-#include "../../include/core/mouse.h"
-#include "../../include/core/keyboard.h"
-#include "../../include/world/world.h"
+#include "ecs/ecs.h"
+#include "core/mouse.h"
+#include "core/keyboard.h"
+#include "world/world.h"
 
 #define PLAYER_HEIGHT 1.8f
 #define PLAYER_WIDTH 0.8f

@@ -1,4 +1,4 @@
-#include "../../include/graphics/mesh_buffer.h"
+#include "graphics/mesh_buffer.h"
 
 void mesh_buffer_create(MeshBuffer *mb, u32 initial_size)
 {

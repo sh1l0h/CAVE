@@ -1,6 +1,6 @@
-#include "../../include/graphics/shader.h"
-#include "../../include/core/io.h"
-#include "../../include/core/log.h"
+#include "graphics/shader.h"
+#include "core/io.h"
+#include "core/log.h"
 
 static i32 shader_compile(const char *shader_path, GLenum type, GLuint *shader)
 {

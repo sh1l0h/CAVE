@@ -1,8 +1,8 @@
 #ifndef CAVE_CHUNK_THREAD_POOL_H
 #define CAVE_CHUNK_THREAD_POOL_H
 
-#include "../util.h"
-#include "../data_structures/array_list.h"
+#include "util.h"
+#include "data_structures/array_list.h"
 #include <SDL2/SDL_thread.h>
 
 #define CHUNK_THREAD_COUNT 11

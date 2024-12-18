@@ -1,7 +1,7 @@
 #ifndef CAVE_MASH_H
 #define CAVE_MASH_H
 
-#include "./mesh_buffer.h"
+#include "mesh_buffer.h"
 
 typedef struct Mesh {
     MeshBuffer vert_buffer;

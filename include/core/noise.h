@@ -1,7 +1,7 @@
 #ifndef CAVE_NOISE_H
 #define CAVE_NOISE_H
 
-#include "../util.h"
+#include "util.h"
 
 typedef struct Noise {
     u32 seed;

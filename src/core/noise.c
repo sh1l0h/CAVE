@@ -1,4 +1,4 @@
-#include "../../include/core/noise.h"
+#include "core/noise.h"
 
 static void swap(i32 *arr, i32 i, i32 j)
 {

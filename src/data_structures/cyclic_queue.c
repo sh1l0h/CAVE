@@ -1,4 +1,4 @@
-#include "../../include/data_structures/cyclic_queue.h"
+#include "data_structures/cyclic_queue.h"
 
 void cyclic_queue_create(CyclicQueue *queue, u32 element_size, u64 initial_size)
 {
