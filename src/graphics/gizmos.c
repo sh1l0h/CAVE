@@ -85,30 +85,21 @@ void gizmos_draw_cube(Vec3 *position, Vec3 *scale)
 
 void gizmos_draw()
 {
-    HashMap *transforms = &ecs->all_component_archetypes[CMP_Transform];
-    HashMap *colliders = &ecs->all_component_archetypes[CMP_BoxCollider];
-    struct ArchetypeRecord *collider_record;
+    ComponentID ids[] = {CMP_BoxCollider, CMP_Transform};
+    u64 remap[ARRAY_SIZE(ids)];
+    ECSIter iter;
+
+    ecs_iter_init(&iter, ids, ARRAY_SIZE(ids), remap);
 
     gizmos_begin();
 
-    hashmap_for_each(colliders, collider_record) {
-        Archetype *archetype = collider_record->archetype;
-        struct ArchetypeRecord *transform_record =
-            hashmap_get(transforms, &archetype->id);
+    while (ecs_iter_next(&iter)) {
+        BoxCollider *collider = ecs_iter_get(&iter, 0);
+        Transform *transform = ecs_iter_get(&iter, 1);
+        Vec3 collider_center;
 
-        if (transform_record == NULL)
-            continue;
-
-        for (u64 i = 0; i < archetype->entities.size; i++) {
-            BoxCollider *collider =
-                array_list_offset(&archetype->components[collider_record->index], i);
-            Transform *transform =
-                array_list_offset(&archetype->components[transform_record->index], i);
-            Vec3 collider_center;
-
-            zinc_vec3_add(&transform->position, &collider->offset, &collider_center);
-            gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
-            gizmos_draw_cube(&collider_center, &collider->half_size);
-        }
+        zinc_vec3_add(&transform->position, &collider->offset, &collider_center);
+        gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
+        gizmos_draw_cube(&collider_center, &collider->half_size);
     }
 }

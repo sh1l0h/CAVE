@@ -44,6 +44,9 @@ typedef struct HashMap {
 #define hashmap_next_in_list(_map, _element) \
     (hashmap_element_by_list(_map, hashmap_list(_map, _element)->next))
 
+#define hashmap_is_list_head(_map, _element) \
+    (hashmap_list((_map), (_element)) == &(_map)->list_head)
+
 #define hashmap_for_each_node(_map, _pos) \
     for ((_pos) = container_of((_map)->list_head.next, HashMapNode, list_node); \
          &(_pos)->list_node != &(_map)->list_head;                              \
@@ -51,7 +54,7 @@ typedef struct HashMap {
 
 #define hashmap_for_each(_map, _pos)                                     \
     for ((_pos) = hashmap_element_by_list(_map, (_map)->list_head.next); \
-         hashmap_list(_map, _pos) != &(_map)->list_head;                 \
+         !hashmap_is_list_head(_map, _pos);                              \
          (_pos) = hashmap_next_in_list(_map, _pos))
 
 

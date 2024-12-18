@@ -342,6 +342,72 @@ Archetype *ecs_get_archetype_by_type(const ArchetypeType *type)
     return result;
 }
 
+void ecs_iter_init(ECSIter *iter, ComponentID *ids,
+                   u64 ids_size, u64 *remap)
+{
+    iter->type.ids = ids;
+    iter->type.size = ids_size;
+    iter->remap = remap;
+    iter->curr_record = NULL;
+    iter->curr_index = 0;
+}
+
+static bool ecs_iter_get_next_record(ECSIter *iter, HashMap *hm)
+{
+    while (!hashmap_is_list_head(hm, iter->curr_record)) {
+
+        if (iter->curr_record->archetype->entities.size == 0)
+            goto next;
+
+        iter->remap[0] = iter->curr_record->index;
+        for (u64 i = 1; i < iter->type.size; i++) {
+            ComponentID curr = iter->type.ids[i];
+            HashMap *component_hm = &ecs->all_component_archetypes[curr];
+            struct ArchetypeRecord *record;
+
+            if (!(record = hashmap_get(component_hm, &iter->curr_record->id)))
+                goto next;
+
+            iter->remap[i] = record->index;
+        }
+
+        return true;
+next:
+        iter->curr_record = hashmap_next_in_list(hm, iter->curr_record);
+    }
+
+    return false;
+}
+
+bool ecs_iter_next(ECSIter *iter)
+{
+    HashMap *hm = &ecs->all_component_archetypes[iter->type.ids[0]];
+
+    if (!iter->curr_record) {
+        iter->curr_record = hashmap_element_by_list(hm, hm->list_head.next);
+
+        return ecs_iter_get_next_record(iter, hm);
+    }
+
+    iter->curr_index++;
+    if (iter->curr_index >= iter->curr_record->archetype->entities.size) {
+        iter->curr_index = 0;
+        iter->curr_record = hashmap_next_in_list(hm, iter->curr_record);
+
+        return ecs_iter_get_next_record(iter, hm);
+    }
+
+    return true;
+}
+
+inline void *ecs_iter_get(ECSIter *iter, u64 index)
+{
+    ArrayList *list =
+        &iter->curr_record->archetype->components[iter->remap[index]];
+
+    return array_list_offset(list, iter->curr_index);
+}
+
 u64 archetype_type_hash(const void *key)
 {
     const ArchetypeType *type = key;

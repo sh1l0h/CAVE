@@ -83,88 +83,71 @@ u64 player_create(const Vec3 *pos)
 
 void player_update_state()
 {
-    HashMap *players = &ecs->all_component_archetypes[CMP_Player],
-            *transforms = &ecs->all_component_archetypes[CMP_Transform],
-            *collider = &ecs->all_component_archetypes[CMP_BoxCollider];
-    struct ArchetypeRecord *player_record;
+    ComponentID ids[] = {CMP_Player, CMP_BoxCollider, CMP_Transform};
+    u64 remap[ARRAY_SIZE(ids)];
+    ECSIter iter;
 
-    hashmap_for_each(players, player_record) {
-        struct ArchetypeRecord *collider_record, *transform_record;
-        Archetype *archetype;
+    ecs_iter_init(&iter, ids, ARRAY_SIZE(ids), remap);
+    while (ecs_iter_next(&iter)) {
+        Player *player = ecs_iter_get(&iter, 0);
+        BoxCollider *collider = ecs_iter_get(&iter, 1);
+        Transform *transform = ecs_iter_get(&iter, 2);
+        Vec3 temp, acc;
+        f32 acc_mag;
 
-        transform_record = hashmap_get(transforms, &player_record->archetype->id);
-        if (transform_record == NULL)
-            continue;
+        zinc_vec3_add(&transform->rotation,
+                      &ZINC_VEC3(mouse.relative_position.y / 500.0f,
+                                 mouse.relative_position.x / 500.0f,
+                                 0.0f),
+                      &transform->rotation);
 
-        collider_record = hashmap_get(collider, &player_record->archetype->id);
-        if (collider_record == NULL)
-            continue;
+        if (transform->rotation.x > ZINC_PI_OVER_2 - 0.01f)
+            transform->rotation.x = ZINC_PI_OVER_2 - 0.01f;
+        else if (transform->rotation.x < -ZINC_PI_OVER_2 + 0.01f)
+            transform->rotation.x = -ZINC_PI_OVER_2 + 0.01f;
 
-        archetype = transform_record->archetype;
-        for (u64 i = 0; i < archetype->entities.size; i++) {
-            Transform *transform =
-                array_list_offset(&archetype->components[transform_record->index], i);
-            BoxCollider *collider =
-                array_list_offset(&archetype->components[collider_record->index], i);
-            Player *player =
-                array_list_offset(&archetype->components[player_record->index], i);
-            Vec3 temp, acc;
-            f32 acc_mag;
-
-            zinc_vec3_add(&transform->rotation,
-                          &ZINC_VEC3(mouse.relative_position.y / 500.0f,
-                                     mouse.relative_position.x / 500.0f,
-                                     0.0f),
-                          &transform->rotation);
-
-            if (transform->rotation.x > ZINC_PI_OVER_2 - 0.01f)
-                transform->rotation.x = ZINC_PI_OVER_2 - 0.01f;
-            else if (transform->rotation.x < -ZINC_PI_OVER_2 + 0.01f)
-                transform->rotation.x = -ZINC_PI_OVER_2 + 0.01f;
-
-            if (keyboard_did_key_go_down(KEY_SNEAK)) {
-                collider->half_size.y = PLAYER_HEIGHT_SNEAKING / 2;
-                collider->offset.y = -PLAYER_COLLIDER_OFFSET_SNEAKING;
-                transform->position.y -= CHANGE_IN_HEIGHT_FROM_GROUND;
-                player->is_sneaking = true;
-            }
-            else if (keyboard_did_key_go_up(KEY_SNEAK)) {
-                collider->half_size.y = PLAYER_HEIGHT / 2;
-                collider->offset.y = -PLAYER_COLLIDER_OFFSET;
-                transform->position.y += CHANGE_IN_HEIGHT_FROM_GROUND;
-                player->is_sneaking = false;
-            }
-
-            zinc_vec3_copy(&transform->forward, &temp);
-            temp.y = 0;
-            zinc_vec3_normalize(&temp);
-
-            acc = (Vec3) ZINC_VEC3_ZERO;
-            if (keyboard_is_key_pressed(KEY_MOVE_FORWARD))
-                zinc_vec3_add(&acc, &temp, &acc);
-
-            if (keyboard_is_key_pressed(KEY_MOVE_BACKWARD)) {
-                zinc_vec3_scale(&temp, -1.0f, &temp);
-                zinc_vec3_add(&acc, &temp, &acc);
-            }
-
-            if (keyboard_is_key_pressed(KEY_MOVE_RIGHT))
-                zinc_vec3_add(&transform->right, &acc, &acc);
-
-            if (keyboard_is_key_pressed(KEY_MOVE_LEFT)) {
-                zinc_vec3_scale(&transform->right, -1.0f, &temp);
-                zinc_vec3_add(&temp, &acc, &acc);
-            }
-            zinc_vec3_normalize(&acc);
-
-            acc_mag = PLAYER_WALKING_ACCELERATION;
-            if (player->is_sneaking)
-                acc_mag = PLAYER_SNEAKING_ACCELERATION;
-            else if (keyboard_is_key_pressed(KEY_ACCELERATE))
-                acc_mag = PLAYER_RUNNING_ACCELERATION;
-
-            zinc_vec3_scale(&acc, acc_mag, &player->acceleration);
+        if (keyboard_did_key_go_down(KEY_SNEAK)) {
+            collider->half_size.y = PLAYER_HEIGHT_SNEAKING / 2;
+            collider->offset.y = -PLAYER_COLLIDER_OFFSET_SNEAKING;
+            transform->position.y -= CHANGE_IN_HEIGHT_FROM_GROUND;
+            player->is_sneaking = true;
         }
+        else if (keyboard_did_key_go_up(KEY_SNEAK)) {
+            collider->half_size.y = PLAYER_HEIGHT / 2;
+            collider->offset.y = -PLAYER_COLLIDER_OFFSET;
+            transform->position.y += CHANGE_IN_HEIGHT_FROM_GROUND;
+            player->is_sneaking = false;
+        }
+
+        zinc_vec3_copy(&transform->forward, &temp);
+        temp.y = 0;
+        zinc_vec3_normalize(&temp);
+
+        acc = (Vec3) ZINC_VEC3_ZERO;
+        if (keyboard_is_key_pressed(KEY_MOVE_FORWARD))
+            zinc_vec3_add(&acc, &temp, &acc);
+
+        if (keyboard_is_key_pressed(KEY_MOVE_BACKWARD)) {
+            zinc_vec3_scale(&temp, -1.0f, &temp);
+            zinc_vec3_add(&acc, &temp, &acc);
+        }
+
+        if (keyboard_is_key_pressed(KEY_MOVE_RIGHT))
+            zinc_vec3_add(&transform->right, &acc, &acc);
+
+        if (keyboard_is_key_pressed(KEY_MOVE_LEFT)) {
+            zinc_vec3_scale(&transform->right, -1.0f, &temp);
+            zinc_vec3_add(&temp, &acc, &acc);
+        }
+        zinc_vec3_normalize(&acc);
+
+        acc_mag = PLAYER_WALKING_ACCELERATION;
+        if (player->is_sneaking)
+            acc_mag = PLAYER_SNEAKING_ACCELERATION;
+        else if (keyboard_is_key_pressed(KEY_ACCELERATE))
+            acc_mag = PLAYER_RUNNING_ACCELERATION;
+
+        zinc_vec3_scale(&acc, acc_mag, &player->acceleration);
     }
 }
 
@@ -201,67 +184,48 @@ static bool player_should_be_constrained_by_sneaking(const Vec3 *position,
 
 void player_update_movement(f32 dt)
 {
-    HashMap *players = &ecs->all_component_archetypes[CMP_Player],
-            *transforms = &ecs->all_component_archetypes[CMP_Transform],
-            *rbs = &ecs->all_component_archetypes[CMP_RigidBody],
-            *collider = &ecs->all_component_archetypes[CMP_BoxCollider];
-    struct ArchetypeRecord *player_record;
+    ComponentID ids[] = {
+        CMP_Player,
+        CMP_RigidBody,
+        CMP_BoxCollider,
+        CMP_Transform
+    };
+    u64 remap[ARRAY_SIZE(ids)];
+    ECSIter iter;
 
-    hashmap_for_each(players, player_record) {
-        struct ArchetypeRecord *collider_record, *rb_record, *transform_record;
-        Archetype *archetype;
+    ecs_iter_init(&iter, ids, ARRAY_SIZE(ids), remap);
+    while (ecs_iter_next(&iter)) {
+        Player *player = ecs_iter_get(&iter, 0);
+        RigidBody *rb = ecs_iter_get(&iter, 1);
+        Transform *transform = ecs_iter_get(&iter, 3);
+        BoxCollider *collider = ecs_iter_get(&iter, 2);
+        f32 drag_mag = rb->on_ground ? PLAYER_DRAG_ON_GROUND : PLAYER_DRAG_IN_AIR;
+        Vec3 horizontal_vel = {{rb->velocity.x, 0.0f, rb->velocity.z}},
+             drag;
 
-        transform_record = hashmap_get(transforms, &player_record->archetype->id);
-        if (transform_record == NULL)
-            continue;
+        zinc_vec3_scale(&horizontal_vel, drag_mag, &drag);
 
-        rb_record = hashmap_get(rbs, &player_record->archetype->id);
-        if (rb_record == NULL)
-            continue;
+        zinc_vec3_sub(&player->acceleration, &drag, &drag);
+        zinc_vec3_scale(&drag, dt, &drag);
 
-        collider_record = hashmap_get(collider, &player_record->archetype->id);
-        if (collider_record == NULL)
-            continue;
+        zinc_vec3_add(&horizontal_vel, &drag, &horizontal_vel);
 
-        archetype = transform_record->archetype;
-        for (u64 i = 0; i < archetype->entities.size; i++) {
-            Transform *transform =
-                array_list_offset(&archetype->components[transform_record->index], i);
-            RigidBody *rb =
-                array_list_offset(&archetype->components[rb_record->index], i);
-            BoxCollider *collider =
-                array_list_offset(&archetype->components[collider_record->index], i);
-            Player *player =
-                array_list_offset(&archetype->components[player_record->index], i);
-            f32 drag_mag = rb->on_ground ? PLAYER_DRAG_ON_GROUND : PLAYER_DRAG_IN_AIR;
-            Vec3 horizontal_vel = {{rb->velocity.x, 0.0f, rb->velocity.z}},
-                 drag;
+        if (player->is_sneaking && rb->on_ground) {
+            // TODO: implement update rate independent solution
+            Vec3 x_vel = ZINC_VEC3_INIT(horizontal_vel.x, 0.0f, 0.0f),
+                 z_vel = ZINC_VEC3_INIT(0.0f, 0.0f, horizontal_vel.z);
 
-            zinc_vec3_scale(&horizontal_vel, drag_mag, &drag);
-
-            zinc_vec3_sub(&player->acceleration, &drag, &drag);
-            zinc_vec3_scale(&drag, dt, &drag);
-
-            zinc_vec3_add(&horizontal_vel, &drag, &horizontal_vel);
-
-            if (player->is_sneaking && rb->on_ground) {
-                // TODO: implement update rate independent solution
-                Vec3 x_vel = ZINC_VEC3_INIT(horizontal_vel.x, 0.0f, 0.0f),
-                     z_vel = ZINC_VEC3_INIT(0.0f, 0.0f, horizontal_vel.z);
-
-                if (player_should_be_constrained_by_sneaking(&transform->position, collider,
-                                                            &x_vel, dt))
-                    horizontal_vel.x = 0.0f;
-                if (player_should_be_constrained_by_sneaking(&transform->position, collider,
-                                                            &z_vel, dt))
-                    horizontal_vel.z = 0.0f;
-            }
-
-            rb->velocity.x = horizontal_vel.x;
-            rb->velocity.y =
-                keyboard_is_key_pressed(KEY_JUMP) && rb->on_ground ? 10.0f : rb->velocity.y;
-            rb->velocity.z = horizontal_vel.z;
+            if (player_should_be_constrained_by_sneaking(&transform->position, collider,
+                                                         &x_vel, dt))
+                horizontal_vel.x = 0.0f;
+            if (player_should_be_constrained_by_sneaking(&transform->position, collider,
+                                                         &z_vel, dt))
+                horizontal_vel.z = 0.0f;
         }
-    }
 
+        rb->velocity.x = horizontal_vel.x;
+        rb->velocity.y =
+            keyboard_is_key_pressed(KEY_JUMP) && rb->on_ground ? 10.0f : rb->velocity.y;
+        rb->velocity.z = horizontal_vel.z;
+    }
 }

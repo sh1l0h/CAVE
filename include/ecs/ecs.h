@@ -49,6 +49,14 @@ struct ArchetypeRecord {
     HashMapNode all_component_archetypes_hashmap;
 };
 
+typedef struct ECSIter {
+    ArchetypeType type;
+    u64 *remap;
+
+    struct ArchetypeRecord *curr_record;
+    u64 curr_index;
+} ECSIter;
+
 typedef struct ECS {
     u64 player_id;
 
@@ -86,6 +94,11 @@ void *ecs_get_component(u64 entity_id, ComponentID component_id);
 void ecs_sort_type(ArchetypeType *type);
 
 Archetype *ecs_get_archetype_by_type(const ArchetypeType *type);
+
+void ecs_iter_init(ECSIter *iter, ComponentID *ids,
+                   u64 ids_size, u64 *remap);
+bool ecs_iter_next(ECSIter *iter);
+void *ecs_iter_get(ECSIter *iter, u64 index);
 
 u64 archetype_type_hash(const void *key);
 i32 archetype_type_cmp(const void *key, const void *arg);

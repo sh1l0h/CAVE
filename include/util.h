@@ -46,4 +46,7 @@
     ((_type *)((char *) (_ptr) - offsetof(_type, _member)))
 #endif
 
+#define ARRAY_SIZE(_arr) \
+    (sizeof((_arr)) / sizeof((_arr)[0]))
+
 #endif

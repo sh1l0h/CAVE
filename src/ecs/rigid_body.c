@@ -72,46 +72,30 @@ break_loop:
 
 void rigidbody_update(f32 dt)
 {
-    HashMap *rbs = &ecs->all_component_archetypes[CMP_RigidBody];
-    HashMap *transforms = &ecs->all_component_archetypes[CMP_Transform];
-    HashMap *colliders = &ecs->all_component_archetypes[CMP_BoxCollider];
-    struct ArchetypeRecord *rb_record;
+    ComponentID ids[] = {CMP_RigidBody, CMP_Transform, CMP_BoxCollider};
+    u64 remap[ARRAY_SIZE(ids)];
+    ECSIter iter;
 
-    hashmap_for_each(rbs, rb_record) {
-        struct ArchetypeRecord *transform_record, *collider_record;
-        Archetype *archetype;
+    ecs_iter_init(&iter, ids, ARRAY_SIZE(ids), remap);
+    while (ecs_iter_next(&iter)) {
+        RigidBody *rb = ecs_iter_get(&iter, 0);
+        Transform *transform = ecs_iter_get(&iter, 1);
+        BoxCollider *collider = ecs_iter_get(&iter, 2);
+        Vec3 vel;
 
-        transform_record = hashmap_get(transforms, &rb_record->archetype->id);
-        if (transform_record == NULL)
-            continue;
+        if (rb->gravity) {
+            Vec3 gravity = ZINC_VEC3_INIT(0.0f, -32.0f, 0.0f);
 
-        collider_record = hashmap_get(colliders, &rb_record->archetype->id);
-        if (collider_record == NULL)
-            continue;
-
-        archetype = rb_record->archetype;
-
-        for (u64 i = 0; i < archetype->entities.size; i++) {
-            Transform *transform =
-                array_list_offset(&archetype->components[transform_record->index], i);
-            BoxCollider *collider = array_list_offset(&archetype->components[collider_record->index], i);
-            RigidBody *rb = array_list_offset(&archetype->components[rb_record->index], i);
-            Vec3 vel;
-
-            if (rb->gravity) {
-                Vec3 gravity = ZINC_VEC3_INIT(0.0f, -32.0f, 0.0f);
-
-                zinc_vec3_scale(&gravity, dt, &gravity);
-                zinc_vec3_add(&rb->velocity, &gravity, &rb->velocity);
-            }
-            zinc_vec3_scale(&rb->velocity, dt, &vel);
-            rigidbody_check_collision(transform, collider, rb,
-                                      &ZINC_VEC3(0.0f, vel.y, 0.0f));
-            rigidbody_check_collision(transform, collider, rb,
-                                      &ZINC_VEC3(vel.x, 0.0f, 0.0f));
-            rigidbody_check_collision(transform, collider, rb,
-                                      &ZINC_VEC3(0.0f, 0.0f, vel.z));
+            zinc_vec3_scale(&gravity, dt, &gravity);
+            zinc_vec3_add(&rb->velocity, &gravity, &rb->velocity);
         }
+        zinc_vec3_scale(&rb->velocity, dt, &vel);
+        rigidbody_check_collision(transform, collider, rb,
+                                  &ZINC_VEC3(0.0f, vel.y, 0.0f));
+        rigidbody_check_collision(transform, collider, rb,
+                                  &ZINC_VEC3(vel.x, 0.0f, 0.0f));
+        rigidbody_check_collision(transform, collider, rb,
+                                  &ZINC_VEC3(0.0f, 0.0f, vel.z));
 
     }
 
