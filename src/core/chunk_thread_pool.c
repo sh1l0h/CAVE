@@ -79,7 +79,7 @@ ChunkThreadTask *chunk_thread_task_alloc(ChunkTreadTaskType type)
     return result;
 }
 
-void chunk_thread_pool_init()
+void chunk_thread_pool_init(u32 thread_count)
 {
     chunk_thread_pool = malloc(sizeof(ChunkThreadPool));
     chunk_thread_pool->task_queue_head = chunk_thread_pool->task_queue_tail = NULL;
@@ -89,13 +89,11 @@ void chunk_thread_pool_init()
     chunk_thread_pool->cond_work = SDL_CreateCond();
     chunk_thread_pool->working_count = 0;
     chunk_thread_pool->stop = false;
-    chunk_thread_pool->thread_count = CHUNK_THREAD_COUNT;
+    chunk_thread_pool->thread_count = thread_count;
     chunk_thread_pool->result_stack_head = NULL;
 
-    for (i32 i = 0; i < CHUNK_THREAD_COUNT; i++)
-        chunk_thread_pool->threads[i] = SDL_CreateThread(chunk_thread_pool_worker,
-                                                         NULL,
-                                                         chunk_thread_pool);
+    for (u32 i = 0; i < thread_count; i++)
+        SDL_CreateThread(chunk_thread_pool_worker, NULL, chunk_thread_pool);
 }
 
 void chunk_thread_pool_deinit()

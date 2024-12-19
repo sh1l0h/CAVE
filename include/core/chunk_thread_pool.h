@@ -22,7 +22,6 @@ typedef struct ChunkThreadTask {
 } ChunkThreadTask;
 
 typedef struct ChunkThreadPool {
-    SDL_Thread *threads[CHUNK_THREAD_COUNT];
     ChunkThreadTask *task_queue_head;
     ChunkThreadTask *task_queue_tail;
 
@@ -42,7 +41,7 @@ extern ChunkThreadPool *chunk_thread_pool;
 
 ChunkThreadTask *chunk_thread_task_alloc(ChunkTreadTaskType type);
 
-void chunk_thread_pool_init();
+void chunk_thread_pool_init(u32 thread_count);
 void chunk_thread_pool_deinit();
 
 void chunk_thread_pool_apply_results();

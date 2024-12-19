@@ -27,7 +27,8 @@ int main()
     u32 last_time, time_to_process = 0,
         ms_per_update = 1000 / FIXED_UPDATES_PER_SECOND,
         second_count = 0,
-        frame_count = 0;
+        frame_count = 0,
+        cpu_count = SDL_GetCPUCount();
 
     log_create();
 
@@ -97,7 +98,8 @@ int main()
     if (keyboard_init())
         goto End;
 
-    chunk_thread_pool_init();
+    log_info("Number of threads: %u", cpu_count);
+    chunk_thread_pool_init(cpu_count - 1);
 
     texture_manager_init();
 
