@@ -6,10 +6,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <stdalign.h>
 
-#include "../lib/ZINC/include/zinc.h"
-#include "./core/log.h"
-#include "./core/direction.h"
+#include "ZINC/include/zinc.h"
+#include "core/log.h"
+#include "core/direction.h"
 
 #define FIXED_UPDATES_PER_SECOND 120
 #define FIXED_DELTA_TIME (1.0f / FIXED_UPDATES_PER_SECOND)
@@ -48,5 +49,7 @@
 
 #define ARRAY_SIZE(_arr) \
     (sizeof((_arr)) / sizeof((_arr)[0]))
+
+#define CACHE_LINE_SIZE 64 // Typical cache line size for modern architectures
 
 #endif

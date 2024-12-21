@@ -22,19 +22,18 @@ typedef struct ChunkThreadTask {
 } ChunkThreadTask;
 
 typedef struct ChunkThreadPool {
-    ChunkThreadTask *task_queue_head;
-    ChunkThreadTask *task_queue_tail;
-
     u32 task_count;
     u32 working_count;
     u32 thread_count;
+    bool stop;
 
     SDL_mutex *mutex;
     SDL_cond *cond_empty;
     SDL_cond *cond_work;
-    bool stop;
 
-    ChunkThreadTask *result_stack_head;
+    ChunkThreadTask *task_queue_head;
+    ChunkThreadTask *task_queue_tail;
+    alignas(CACHE_LINE_SIZE) ChunkThreadTask *result_stack_head;
 } ChunkThreadPool;
 
 extern ChunkThreadPool *chunk_thread_pool;
