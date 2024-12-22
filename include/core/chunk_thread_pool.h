@@ -11,7 +11,7 @@
 #define chunk_thread_task_get_data(_task) ((void *)((_task)->data))
 
 typedef enum ChunkThreadTaskType {
-    TASK_GEN_COLUMN,
+    TASK_GEN_CHUNK,
     TASK_MESH_CHUNK
 } ChunkTreadTaskType;
 

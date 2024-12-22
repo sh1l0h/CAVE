@@ -56,7 +56,7 @@ typedef struct Chunk {
     struct ChunkBlockData *block_data;
     HashMapNode inactive_chunks_hashmap;
 
-    // Number of non-air blocks
+    // number of non-air blocks
     u16 block_count;
 
     // If true, the chuck needs to be remeshed

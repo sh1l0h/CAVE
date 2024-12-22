@@ -31,8 +31,8 @@ static int chunk_thread_pool_worker(void *arg)
         SDL_UnlockMutex(chunk_thread_pool->mutex);
 
         switch (task->type) {
-        case TASK_GEN_COLUMN:
-            world_generate_chunk_column(chunk_thread_task_get_data(task));
+        case TASK_GEN_CHUNK:
+            world_generate_chunk(chunk_thread_task_get_data(task));
             break;
         case TASK_MESH_CHUNK:
             chunk_mesh(chunk_thread_task_get_data(task));
@@ -66,7 +66,7 @@ static int chunk_thread_pool_worker(void *arg)
 }
 
 const size_t chunk_thread_task_data_size[] = {
-    [TASK_GEN_COLUMN] = sizeof(struct ColumnGenTaskData),
+    [TASK_GEN_CHUNK] = sizeof(struct ChunkGenTaskData),
     [TASK_MESH_CHUNK] = sizeof(struct ChunkMeshTaskData)
 };
 
@@ -126,21 +126,17 @@ void chunk_thread_pool_apply_results()
         struct ChunkThreadTask *next = curr->next;
 
         switch(curr->type) {
-        case TASK_GEN_COLUMN:
+        case TASK_GEN_CHUNK:
             {
-                struct ColumnGenTaskData *task_data = chunk_thread_task_get_data(curr);
+                struct ChunkGenTaskData *task_data = chunk_thread_task_get_data(curr);
 
-                hashmap_remove(&world->columns_in_generation, &task_data->vec);
+                hashmap_remove(&world->chunks_in_generation, &task_data->pos);
 
-                for(i32 y = 0; y < CHUNK_COLUMN_HEIGHT; y++) {
-                    Chunk *curr_chunk = task_data->column[y];
-
-                    chunk_init_buffers(curr_chunk);
-                    if (!world_set_chunk(curr_chunk))
-                        hashmap_add(&world->inactive_chunks, curr_chunk);
-                    else
-                        world_make_neighbors_dirty(&curr_chunk->position);
-                }
+                chunk_init_buffers(task_data->result);
+                if (!world_set_chunk(task_data->result))
+                    hashmap_add(&world->inactive_chunks, task_data->result);
+                else
+                    world_make_neighbors_dirty(&task_data->result->position);
             }
             break;
         case TASK_MESH_CHUNK:

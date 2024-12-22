@@ -60,33 +60,18 @@ static void world_center_around_position(World *world, Vec3 *pos)
     for (i32 z = 0; z < world->chunks_size.z; z++) {
         for (i32 x = 0; x < world->chunks_size.x; x++) {
             for (i32 y = 0; y < world->chunks_size.y; y++) {
-                Vec3i offset = {{x, y, z}},
-                      chunk_pos;
+                Vec3i offset = ZINC_VEC3I_INIT(x, y, z), chunk_pos;
                 Chunk **curr = world->chunks + world_offset_to_index(&offset),
                       *chunk;
                 ChunkThreadTask *task;
-                struct ColumnGenTaskData *task_data;
+                struct ChunkGenTaskData *task_data;
 
                 if (*curr != NULL)
                     continue;
 
                 zinc_vec3i_add(&offset, &world->origin, &chunk_pos);
 
-                if (chunk_pos.y < 0)
-                    continue;
-
-                if (chunk_pos.y >= CHUNK_COLUMN_HEIGHT) {
-                    Chunk *chunk = malloc(sizeof(Chunk));
-
-                    chunk_create(chunk, &chunk_pos);
-                    chunk_init_buffers(chunk);
-                    *curr = chunk;
-                    world_make_neighbors_dirty(&chunk->position);
-                    continue;
-                }
-
-                if (hashmap_get(&world->columns_in_generation,
-                                &ZINC_VEC2I(chunk_pos.x, chunk_pos.z)))
+                if (hashmap_get(&world->chunks_in_generation, &chunk_pos))
                     continue;
 
                 chunk = hashmap_remove(&world->inactive_chunks, &chunk_pos);
@@ -98,17 +83,13 @@ static void world_center_around_position(World *world, Vec3 *pos)
                 }
                 //TODO: check saves
 
-                if (chunk_pos.y < 0)
-                    continue;
-
-                task = chunk_thread_task_alloc(TASK_GEN_COLUMN);
+                task = chunk_thread_task_alloc(TASK_GEN_CHUNK);
                 task_data = chunk_thread_task_get_data(task);
-                task_data->vec.x = chunk_pos.x;
-                task_data->vec.y = chunk_pos.z;
+                zinc_vec3i_copy(&chunk_pos, &task_data->pos);
 
                 chunk_thread_pool_add_task(task);
 
-                hashmap_add(&world->columns_in_generation, task_data);
+                hashmap_add(&world->chunks_in_generation, task_data);
             }
         }
     }
@@ -133,10 +114,10 @@ void world_create(i32 size_x, i32 size_y, i32 size_z)
                    offsetof(Chunk, position),
                    vec3i_hash, vec3i_cmp, 0.8f);
 
-    hashmap_create(&world->columns_in_generation, 10,
-                   offsetof(struct ColumnGenTaskData, columns_in_generation_hashmap),
-                   offsetof(struct ColumnGenTaskData, vec),
-                   vec2i_hash, vec2i_cmp, 0.8f);
+    hashmap_create(&world->chunks_in_generation, 10,
+                   offsetof(struct ChunkGenTaskData, chunks_in_generation),
+                   offsetof(struct ChunkGenTaskData, pos),
+                   vec3i_hash, vec3i_cmp, 0.8f);
 
     world->chunks_size = ZINC_VEC3I(size_x, size_y, size_z);
     world->chunks = calloc(WORLD_VOLUME, sizeof(Chunk *));
@@ -161,73 +142,53 @@ void world_destroy()
     free(world->chunks);
 
     hashmap_destroy(&world->inactive_chunks, chunk_destroy_wrapper);
-    hashmap_destroy(&world->columns_in_generation, NULL);
+    hashmap_destroy(&world->chunks_in_generation, NULL);
 
     free(world);
 }
 
-void world_generate_chunk_column(struct ColumnGenTaskData *data)
+void world_generate_chunk(struct ChunkGenTaskData *data)
 {
-    Chunk **column = data->column;
-    Vec2i *column_position = &data->vec, column_pos_in_blocks;
+    Vec3i chunk_pos_in_blocks;
 
-    for (i32 i = 0; i < CHUNK_COLUMN_HEIGHT; i++) {
-        column[i] = malloc(sizeof(*column[i]));
-        chunk_create(column[i],
-                     &ZINC_VEC3I(column_position->x, i, column_position->y));
-    }
+    data->result = malloc(sizeof(*data->result));
+    chunk_create(data->result, &data->pos);
 
-    zinc_vec2i_scale(column_position, CHUNK_SIZE, &column_pos_in_blocks);
+    zinc_vec3i_scale(&data->pos, CHUNK_SIZE, &chunk_pos_in_blocks);
 
     for (i32 z = 0; z < CHUNK_SIZE; z++) {
         for (i32 x = 0; x < CHUNK_SIZE; x++) {
-            Vec2i block_pos;
-            f32 mountain_noise;
-            bool is_air_above = true;
-            u8 dirt_count = 3;
+            Vec2 column_pos = ZINC_VEC2I_INIT((chunk_pos_in_blocks.x + x) / 900.0f,
+                                              (chunk_pos_in_blocks.z + z) / 900.0f);
+            f32 height_noise;
 
-            zinc_vec2i_add(&column_pos_in_blocks, &ZINC_VEC2I(x, z), &block_pos);
+            height_noise = noise_2d_octave_perlin(&world->noise,
+                                                  &column_pos,
+                                                  3, 0.5f);
 
-            mountain_noise =
-                noise_2d_octave_perlin(&world->noise,
-                                       &ZINC_VEC2(block_pos.x / 900.0f, block_pos.y / 900.0f),
-                                       3, 0.5f);
-
-            for (i32 y = CHUNK_COLUMN_HEIGHT * CHUNK_SIZE - 1; y >= 0; y--) {
-                Vec3i offset = {{x, y % CHUNK_SIZE, z}};
-                Chunk *chunk = column[y / CHUNK_SIZE];
+            for (i32 y = CHUNK_SIZE - 1; y >= 0; y--) {
+                Vec3i offset = ZINC_VEC3I_INIT(x, y, z), block_pos;
+                f32 noise_3d;
                 u16 block_type = BLOCK_AIR;
 
-                f32 noise_3d =
-                    noise_3d_octave_perlin(&world->noise,
-                                           &ZINC_VEC3(block_pos.x / 100.0f,
-                                                      y / 800.0f,
-                                                      block_pos.y / 100.0f),
-                                           3, 0.3);
-                if (noise_3d + dencity_bias(y, height_spline(mountain_noise)) > 0.0) {
-                    if(is_air_above) {
-                        block_type = BLOCK_GRASS;
-                    }
-                    else if(dirt_count > 0) {
-                        block_type = BLOCK_DIRT;
-                        dirt_count--;
-                    }
-                    else {
-                        block_type = BLOCK_STONE;
-                    }
+                zinc_vec3i_add(&chunk_pos_in_blocks, &offset, &block_pos);
 
-                    is_air_above = false;
-                }
-                else {
-                    is_air_above = true;
-                    dirt_count = 3;
-                }
+                noise_3d = noise_3d_octave_perlin(&world->noise,
+                                                  &ZINC_VEC3(block_pos.x / 100.0f,
+                                                             block_pos.y / 800.0f,
+                                                             block_pos.z / 100.0f),
+                                                  3, 0.3);
 
-                chunk->block_data->data[CHUNK_OFFSET_2_INDEX(offset)] = block_type;
-                chunk->block_count++;
+                if (noise_3d + dencity_bias(block_pos.y, height_spline(height_noise)) > 0.0)
+                    block_type = BLOCK_STONE;
+
+                data->result->block_data->data[CHUNK_OFFSET_2_INDEX(offset)] = block_type;
+                if (block_type != BLOCK_AIR)
+                    data->result->block_count++;
             }
         }
     }
+
 }
 
 inline void world_update()

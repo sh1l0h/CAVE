@@ -10,12 +10,10 @@
 
 #define WORLD_VOLUME (world->chunks_size.x * world->chunks_size.y * world->chunks_size.z)
 
-#define CHUNK_COLUMN_HEIGHT 15
-
-struct ColumnGenTaskData {
-    Vec2i vec;
-    Chunk *column[CHUNK_COLUMN_HEIGHT];
-    HashMapNode columns_in_generation_hashmap;
+struct ChunkGenTaskData {
+    Vec3i pos;
+    Chunk *result;
+    HashMapNode chunks_in_generation;
 };
 
 typedef struct World {
@@ -28,8 +26,7 @@ typedef struct World {
     Chunk **chunks;
     Vec3i chunks_size;
 
-    // Stores vec2i positions of chunk columns that are in the process of generation
-    HashMap columns_in_generation;
+    HashMap chunks_in_generation;
 
     // HashMap of chunks that are loaded but inactive
     HashMap inactive_chunks;
@@ -45,7 +42,7 @@ void world_update();
 
 void world_render();
 
-void world_generate_chunk_column(struct ColumnGenTaskData *data);
+void world_generate_chunk(struct ChunkGenTaskData *data);
 
 bool world_set_chunk(Chunk *chunk);
 
