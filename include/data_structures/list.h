@@ -19,6 +19,9 @@
          (_pos) != (_head);                                 \
          (_pos) = (_next), (_next) = (_pos)->prev)
 
+#define list_is_empty(_head) \
+    ((_head)->next == (_head))
+
 typedef struct ListNode {
     struct ListNode *next;
     struct ListNode *prev;

@@ -35,5 +35,6 @@ void list_del(ListNode *node)
 {
     node->prev->next = node->next;
     node->next->prev = node->prev;
+    list_create(node);
 }
 

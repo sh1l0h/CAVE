@@ -208,10 +208,10 @@ void chunk_manager_deinit()
     free(chunk_manager);
 }
 
-inline struct ChunkBlockData *chunk_block_data_allocate()
+struct ChunkBlockData *chunk_block_data_alloc()
 {
-    struct ChunkBlockData *result =
-        calloc(1, sizeof(*result) + CHUNK_VOLUME * sizeof(u16));
+    struct ChunkBlockData *result = 
+        malloc(sizeof(*result) + CHUNK_VOLUME * sizeof(u16));
 
     result->owner_count = 1;
     return result;
@@ -227,12 +227,14 @@ void chunk_create(Chunk *chunk, const Vec3i *pos)
                               CHUNK_SIZE * (chunk->position.y + 0.5f),
                               CHUNK_SIZE * (chunk->position.z + 0.5f));
 
-    chunk->block_data = chunk_block_data_allocate();
+    chunk->block_data = NULL;
+    chunk->activity_flags = 0;
+    chunk->active_neighbors = 0;
 
-    chunk->block_count = 0;
     chunk->is_dirty = true;
+    list_create(&chunk->active_chunks);
 
-    hashmap_node_create(&chunk->inactive_chunks_hashmap);
+    hashmap_node_create(&chunk->chunks);
 
     chunk->index_count = 0;
 }
@@ -416,7 +418,7 @@ static void chunk_mesh_arg_create(Chunk *chunk, struct ChunkMeshTaskData *task_d
                                             z + chunk->position.z);
                 Chunk *chunk = world_get_chunk(&pos);
 
-                if (chunk == NULL)
+                if (!chunk || !chunk->block_data)
                     continue;
 
                 chunk->block_data->owner_count++;
@@ -436,10 +438,7 @@ void chunk_render(Chunk *chunk)
     f32 projection_on_x, projection_on_y, projection_on_z, h;
     Mat4 model;
 
-    if (!chunk)
-        return;
-
-    if (chunk->block_count == 0)
+    if (!chunk || !chunk->block_data || chunk->block_data->block_count == 0)
         return;
 
     if (chunk->is_dirty) {
@@ -501,10 +500,55 @@ void chunk_render(Chunk *chunk)
     glDrawElements(GL_TRIANGLES, chunk->index_count, GL_UNSIGNED_SHORT, 0);
 }
 
+void chunk_make_active(Chunk *chunk, ListNode *node)
+{
+    list_add(node, &chunk->active_chunks);
+
+    chunk->active_neighbors = 0;
+    chunk->activity_flags = 0;
+    for (Direction dir = 0; dir < DIR_COUNT; dir++) {
+        Vec3i neighbor_pos;
+        Chunk *neighbor;
+
+        direction_get_norm(dir, &neighbor_pos);
+        zinc_vec3i_add(&chunk->position, &neighbor_pos, &neighbor_pos);
+        neighbor = world_get_chunk(&neighbor_pos);
+        if (!neighbor || !chunk_is_active(neighbor))
+            continue;
+
+        neighbor->active_neighbors++;
+        neighbor->activity_flags = BIT_SET(neighbor->activity_flags,
+                                           direction_get_inverse(dir));
+        chunk->active_neighbors++;
+        chunk->activity_flags = BIT_SET(chunk->activity_flags, dir);
+    }
+}
+
+void chunk_make_inactive(Chunk *chunk)
+{
+    list_del(&chunk->active_chunks);
+
+    for (Direction dir = 0; dir < DIR_COUNT; dir++) {
+        Vec3i neighbor_pos;
+        Chunk *neighbor;
+
+        if (!chunk_is_neighbor_active(chunk, dir))
+            continue;
+
+        direction_get_norm(dir, &neighbor_pos);
+        zinc_vec3i_add(&neighbor_pos, &chunk->position, &neighbor_pos);
+        neighbor = world_get_chunk(&neighbor_pos);
+
+        neighbor->active_neighbors--;
+        neighbor->activity_flags = BIT_UNSET(neighbor->activity_flags,
+                                             direction_get_inverse(dir));
+    }
+}
+
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
 {
     if (chunk->block_data->owner_count > 1) {
-        struct ChunkBlockData *new_block_data = chunk_block_data_allocate();
+        struct ChunkBlockData *new_block_data = chunk_block_data_alloc();
 
         memcpy(new_block_data->data,
                chunk->block_data->data,
@@ -515,9 +559,9 @@ void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block)
     }
 
     if (block == BLOCK_AIR)
-        chunk->block_count--;
+        chunk->block_data->block_count--;
     else if (chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] == BLOCK_AIR)
-        chunk->block_count++;
+        chunk->block_data->block_count++;
 
     chunk->block_data->data[CHUNK_OFFSET_2_INDEX((*pos))] = block;
     chunk->is_dirty = true;

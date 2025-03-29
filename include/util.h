@@ -33,6 +33,10 @@
                ((pos)->y < 0 ? CHUNK_SIZE : 0) + (pos)->y % CHUNK_SIZE, \
                ((pos)->z < 0 ? CHUNK_SIZE : 0) + (pos)->z % CHUNK_SIZE)
 
+#define IS_BIT_SET(_data, _bit) ((_data) & (1ull << (_bit)))
+#define BIT_SET(_data, _bit) ((_data) | (1ull << (_bit)))
+#define BIT_UNSET(_data, _bit) ((_data) & ~(1ull << (_bit)))
+
 #define MIN(a, b) ((a) <= (b) ? (a) : (b))
 #define MAX(a, b) ((a) >= (b) ? (a) : (b))
 #define CLAMP(v, min, max) MAX(min, MIN(max, v))

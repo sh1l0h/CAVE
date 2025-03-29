@@ -108,7 +108,7 @@ int main()
     gizmos_init();
     gizmos_set_color(0.0f, 1.0f, 0.0f, 1.0f);
 
-    world_create(32, 20, 32);
+    world_create(16);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 

@@ -12,29 +12,20 @@
 
 struct ChunkGenTaskData {
     Vec3i pos;
-    Chunk *result;
-    HashMapNode chunks_in_generation;
+    struct ChunkBlockData *result;
 };
 
 typedef struct World {
     Noise noise;
-
-    // Near-bottom-left coordinate of active chunks
+    i32 render_radius_squared;
     Vec3i origin;
-
-    // 3D array of active chunks
-    Chunk **chunks;
-    Vec3i chunks_size;
-
-    HashMap chunks_in_generation;
-
-    // HashMap of chunks that are loaded but inactive
-    HashMap inactive_chunks;
+    ListNode active_chunks;
+    HashMap chunks;
 } World;
 
 extern World *world;
 
-void world_create(i32 size_x, i32 size_y, i32 size_z);
+void world_create(i32 render_radius);
 
 void world_destroy();
 
@@ -44,13 +35,14 @@ void world_render();
 
 void world_generate_chunk(struct ChunkGenTaskData *data);
 
-bool world_set_chunk(Chunk *chunk);
+void world_add_chunk(Chunk *chunk);
 
 Chunk *world_get_chunk(const Vec3i *chunk_pos);
 
 void world_make_neighbors_dirty(const Vec3i *chunk_pos);
 
-void world_block_to_chunk_and_offset(const Vec3i *block_pos, Chunk **chunk,
+void world_block_to_chunk_and_offset(const Vec3i *block_pos,
+                                     Chunk **chunk,
                                      Vec3i *block_offset);
 
 void world_cast_ray(const Vec3 *origin,
@@ -59,13 +51,5 @@ void world_cast_ray(const Vec3 *origin,
                     Chunk **chunk,
                     Vec3i *block_offset,
                     Direction *facing_dir);
-
-u32 world_offset_to_index(const Vec3i *offset);
-
-bool world_is_offset_in_bounds(const Vec3i *offset);
-
-bool world_is_chunk_in_bounds(const Vec3i *chunk_pos);
-
-bool world_is_block_in_bounds(const Vec3i *block_pos);
 
 #endif

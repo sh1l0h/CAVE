@@ -15,5 +15,6 @@ typedef enum Direction {
 } Direction;
 
 void direction_get_norm(Direction dir, Vec3i *dest);
+Direction direction_get_inverse(Direction dir);
 
 #endif

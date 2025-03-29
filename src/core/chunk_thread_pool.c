@@ -129,14 +129,25 @@ void chunk_thread_pool_apply_results()
         case TASK_GEN_CHUNK:
             {
                 struct ChunkGenTaskData *task_data = chunk_thread_task_get_data(curr);
+                Chunk *chunk = world_get_chunk(&task_data->pos);
 
-                hashmap_remove(&world->chunks_in_generation, &task_data->pos);
+                if (!chunk) {
+                    free(task_data->result);
+                    break;
+                }
+                chunk->block_data = task_data->result;
+                chunk_init_buffers(chunk);
 
-                chunk_init_buffers(task_data->result);
-                if (!world_set_chunk(task_data->result))
-                    hashmap_add(&world->inactive_chunks, task_data->result);
-                else
-                    world_make_neighbors_dirty(&task_data->result->position);
+                for (Direction dir = 0; dir < DIR_COUNT; dir++) {
+                    if (chunk_is_neighbor_active(chunk, dir)) {
+                        Vec3i neighbor_pos;
+
+                        direction_get_norm(dir, &neighbor_pos);
+                        zinc_vec3i_add(&neighbor_pos, &chunk->position, &neighbor_pos);
+                        world_get_chunk(&neighbor_pos)->is_dirty = true;
+                    }
+                }
+
             }
             break;
         case TASK_MESH_CHUNK:
@@ -145,10 +156,7 @@ void chunk_thread_pool_apply_results()
                 Mesh *mesh = &task_data->result;
                 Chunk *chunk = world_get_chunk(&task_data->chunk_pos);
 
-                if (chunk == NULL)
-                    chunk = hashmap_get(&world->inactive_chunks, &task_data->chunk_pos);
-
-                if (chunk != NULL && chunk->mesh_time < task_data->mesh_time) {
+                if (chunk && chunk->mesh_time < task_data->mesh_time) {
                     chunk->mesh_time = task_data->mesh_time;
                     glBindVertexArray(chunk->VAO);
                     glBindBuffer(GL_ARRAY_BUFFER, chunk->VBO);

@@ -27,7 +27,7 @@ static void rigidbody_check_collision(Transform *transform,
                 Vec3i offset;
 
                 world_block_to_chunk_and_offset(&block_pos, &chunk, &offset);
-                if ((chunk != NULL
+                if ((chunk && chunk->block_data
                      && chunk->block_data->data[CHUNK_OFFSET_2_INDEX(offset)] == 0))
                     continue;
 

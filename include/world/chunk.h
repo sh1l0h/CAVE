@@ -30,9 +30,13 @@
 
 #define CHUNK_OFFSET_2_INDEX(pos) ((pos).y + (pos).x*CHUNK_SIZE + (pos).z*CHUNK_SIZE*CHUNK_SIZE)
 
+#define chunk_is_neighbor_active(_chunk, _dir) (IS_BIT_SET((_chunk)->activity_flags, (_dir)))
+#define chunk_is_active(_chunk) ((_chunk->active_chunks.next) != &(_chunk)->active_chunks)
 
 struct ChunkBlockData {
     u64 owner_count;
+    // Number of non-air blocks
+    u16 block_count;
     u16 data[];
 };
 
@@ -54,14 +58,15 @@ typedef struct Chunk {
     // [8;11] - Light intensity
     // [0;7]  - Block id
     struct ChunkBlockData *block_data;
-    HashMapNode inactive_chunks_hashmap;
-
-    // number of non-air blocks
-    u16 block_count;
+    HashMapNode chunks;
+    ListNode active_chunks;
 
     // If true, the chuck needs to be remeshed
     bool is_dirty;
     bool has_buffers;
+
+    u8 activity_flags;
+    u8 active_neighbors;
 
     // Time when the current mesh was tasked to generate
     u32 mesh_time;
@@ -88,7 +93,7 @@ i32 chunk_manager_init();
 
 void chunk_manager_deinit();
 
-struct ChunkBlockData *chunk_block_data_allocate();
+struct ChunkBlockData *chunk_block_data_alloc();
 
 void chunk_create(Chunk *chunk, const Vec3i *pos);
 
@@ -102,6 +107,10 @@ void chunk_update(Chunk *chunk);
 void chunk_mesh(struct ChunkMeshTaskData *data);
 
 void chunk_render(Chunk *chunk);
+
+void chunk_make_active(Chunk *chunk, ListNode *node);
+
+void chunk_make_inactive(Chunk *chunk);
 
 void chunk_set_block(Chunk *chunk, const Vec3i *pos, u32 block);
 
