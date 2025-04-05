@@ -28,10 +28,10 @@
                (((pos)->y < 0 ? -CHUNK_SIZE + 1 : 0) + (pos)->y) / CHUNK_SIZE, \
                (((pos)->z < 0 ? -CHUNK_SIZE + 1 : 0) + (pos)->z) / CHUNK_SIZE)
 
-#define BLOCK_2_OFFSET_IN_CHUNK(pos)                                    \
-    ZINC_VEC3I(((pos)->x < 0 ? CHUNK_SIZE : 0) + (pos)->x % CHUNK_SIZE, \
-               ((pos)->y < 0 ? CHUNK_SIZE : 0) + (pos)->y % CHUNK_SIZE, \
-               ((pos)->z < 0 ? CHUNK_SIZE : 0) + (pos)->z % CHUNK_SIZE)
+#define BLOCK_2_OFFSET_IN_CHUNK(pos)                                                                        \
+    ZINC_VEC3I(((pos)->x >= 0 ? (pos)->x % CHUNK_SIZE : (CHUNK_SIZE + (pos)->x % CHUNK_SIZE) % CHUNK_SIZE), \
+               ((pos)->y >= 0 ? (pos)->y % CHUNK_SIZE : (CHUNK_SIZE + (pos)->y % CHUNK_SIZE) % CHUNK_SIZE), \
+               ((pos)->z >= 0 ? (pos)->z % CHUNK_SIZE : (CHUNK_SIZE + (pos)->z % CHUNK_SIZE) % CHUNK_SIZE))
 
 #define IS_BIT_SET(_data, _bit) ((_data) & (1ull << (_bit)))
 #define BIT_SET(_data, _bit) ((_data) | (1ull << (_bit)))
@@ -45,7 +45,7 @@
 #ifdef __GNUC__
 #define container_of(_ptr, _type, _member)   \
     ({const typeof(((_type *) 0)->_member) *_t = (_ptr); \
-      (_type *)((char *) _t - offsetof(_type, _member));})
+     (_type *)((char *) _t - offsetof(_type, _member));})
 #else
 #define container_of(_ptr, _type, _member)   \
     ((_type *)((char *) (_ptr) - offsetof(_type, _member)))
